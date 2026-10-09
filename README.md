@@ -2,9 +2,9 @@
 
 Análisis espacial y temporal de los 1,658 siniestros de tránsito fatales registrados por el Observatorio Nacional de Seguridad Vial (ONSV) en las provincias de Lima y Callao entre 2021 y 2024, en los que fallecieron 1,724 personas.
 
-Elaborado sobre la base del trabajo final de los módulos de Ciencia de Datos I y II del Posgrado en Big Data e Inteligencia Territorial – Cohorte 7.
+Elaborado sobre la base del trabajo final de los módulos de Ciencia de Datos I y II del Posgrado en Big Data e Inteligencia Territorial – Cohorte 7 – Facultad Latinoamericana de Ciencias Sociales - FLACSO Argentina.
 
-Publicado el 8 de Octubre de 2026
+Publicado en GitHub el 8 de Octubre de 2026.
 
 **Autor:** MSc. Arq. Carlos Morales Dávila
 

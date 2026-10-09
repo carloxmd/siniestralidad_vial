@@ -1,0 +1,4244 @@
+---
+title: Patrones espaciales y temporales de los siniestros de tránsito fatales en Lima
+  y Callao, 2021–2024
+author: "Elaborado por MSc. Arq. Carlos Morales Dávila"
+date: 'Versión ajustada: 8 de octubre de 2026 | Entrega original: 19 de agosto de 2026'
+knit: (function(input, ...) rmarkdown::render(input, output_file = "index.html", envir = globalenv()))
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: false
+    code_folding: hide
+    df_print: kable
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  message = FALSE,
+  warning = FALSE,
+  fig.align = "center",
+  dpi = 150,
+  # Cada gráfico se guarda también como PNG en la carpeta figures/
+  dev = c("png"),
+  fig.path = "figures/"
+)
+```
+
+## Resumen
+
+Este trabajo describe los patrones espaciales y temporales de los 1,658 siniestros de tránsito fatales registrados por el Observatorio Nacional de Seguridad Vial (ONSV) en las provincias de Lima y Callao entre 2021 y 2024, en los que fallecieron 1,724 personas. Es un análisis descriptivo y exploratorio, elaborado con información secundaria de acceso público y complementado con pruebas estadísticas y análisis espacial multiescala, en el marco del trabajo final de los módulos de Ciencia de Datos I y II del Posgrado en Big Data e Inteligencia Territorial - Cohorte 7.
+
+Los principales hallazgos son los siguientes:
+
+- **El aumento metropolitano se concentró en la Panamericana.** Los siniestros fatales en la Panamericana Norte y Sur (PE-1) pasaron de 80 en 2021 a 123 en 2024 (+54%, p ≈ 0.003), mientras que en el resto de la red se mantuvieron prácticamente constantes (309 y 310). El incremento proviene sobre todo de la Panamericana Sur, que pasó de 33 a 71 siniestros. Esta vía concentró uno de cada cuatro siniestros y fallecidos del período.
+- **Los tramos críticos son pocos y están identificados.** De los 5,959 tramos de unos 500 metros en que se dividió la red vial principal, 22 presentan significativamente más siniestros que vías de su misma clase; 17 de ellos están en la Panamericana.
+- **Los peatones son la mayoría de las víctimas.** El 54.1% de las personas fallecidas eran peatones, proporción que se mantuvo entre 52% y 55% en los cuatro años.
+- **La madrugada concentra el riesgo en la Panamericana.** Un tercio de los siniestros de la PE-1 ocurrió de madrugada, casi el doble que en el resto de la red, y en una cuarta parte de los siniestros de esta vía el vehículo se dio a la fuga.
+- **El "dónde" depende de cómo se mida.** Por habitante, las tasas más altas corresponden a distritos atravesados por la Panamericana (Punta Hermosa, Lurín, San Bartolo); por kilómetro de vía, a distritos urbanos densos (Rímac, Los Olivos, Chorrillos). San Juan de Lurigancho, segundo en número de casos, registra una de las tasas por habitante más bajas.
+- **La serie metropolitana no muestra una reducción**, aunque la variación anual no es estadísticamente concluyente (p ≈ 0.13) y 2021 estuvo afectado por restricciones de movilidad.
+
+## 1. Introducción
+
+Los siniestros de tránsito fatales no se distribuyen de manera uniforme: se concentran en ciertos lugares, días y horas, y afectan de forma desigual a los distintos usuarios de la vía. En una aglomeración extensa y heterogénea como Lima y Callao, reconocer esa estructura espacial y temporal es un paso previo para orientar las intervenciones de seguridad vial y de gestión urbana.
+
+A escala mundial, los siniestros de tránsito causan alrededor de 1.19 millones de muertes al año, y más de la mitad de las víctimas son usuarios vulnerables de la vía: peatones, ciclistas y motociclistas. Por ello, el Decenio de Acción para la Seguridad Vial 2021–2030 de las Naciones Unidas plantea reducir a la mitad las muertes por esta causa hacia 2030 (Organización Panamericana de la Salud [OPS], 2023). Saber dónde y cuándo se concentran los siniestros fatales es una condición para dirigir las intervenciones hacia esa meta.
+
+Las cifras agregadas, sin embargo, pueden ocultar tanto como muestran. Un total metropolitano estable o en leve aumento puede ser el resultado de cambios localizados en unas pocas vías. A su vez, la identificación de los territorios más afectados depende de cómo se mida: del denominador con que se calculan las tasas y del tamaño de las unidades espaciales en que se agregan los datos (Xu et al., 2018). Este trabajo aborda ambos problemas con información pública del ONSV. Descompone la evolución temporal según el tipo de vía y examina la distribución territorial a tres escalas: distritos, tramos de la red vial y celdas hexagonales. Además, distingue las concentraciones que persisten entre escalas de aquellas que dependen de la forma de medir.
+
+El ámbito de estudio comprende los 50 distritos de las provincias de Lima y Callao. El período 2021–2024 corresponde a los cuatro años completos disponibles en las bases del ONSV. La pregunta que orienta el trabajo es: **¿qué patrones y diferencias espaciales y temporales presentaron los siniestros de tránsito fatales registrados en los 50 distritos de las provincias de Lima y Callao entre 2021 y 2024?**
+
+El objetivo general es analizar los patrones espaciales y temporales de los siniestros de tránsito fatales registrados en dichos distritos durante el período 2021–2024. Los objetivos específicos son:
+
+- Caracterizar la magnitud de los siniestros fatales y el perfil de las personas y los vehículos involucrados.
+- Analizar su evolución anual y mensual, distinguiendo la Panamericana del resto de la red vial.
+- Examinar su distribución según día de la semana y período del día.
+- Identificar las concentraciones territoriales a distintas escalas:
+  - distritos: frecuencias, tasas por habitante y por kilómetro de vía, y cambio entre 2021 y 2024;
+  - tramos de la red vial principal;
+  - celdas hexagonales.
+
+El estudio es descriptivo y exploratorio. Identifica patrones y diferencias, pero no establece relaciones causales entre las características del entorno urbano y la ocurrencia de los siniestros.
+
+El documento se organiza en seis secciones además de esta introducción. La sección 2 describe las fuentes, las definiciones y los métodos. La sección 3 documenta, con su código, el procesamiento de la información. La sección 4 presenta los resultados y la sección 5 los discute, junto con los alcances y limitaciones del estudio. La sección 6 resume las conclusiones y la sección 7 reúne las referencias. Las secciones 3 y 4 incluyen el código en R empleado en cada etapa, de modo que el procesamiento y los análisis pueden replicarse paso a paso. El documento y el código están disponibles en el repositorio <https://github.com/carloxmd/siniestralidad_vial>.
+
+## 2. Métodos
+
+### 2.1 Fuentes, definiciones y unidad de análisis
+
+La información principal proviene de las bases de datos abiertas del Observatorio Nacional de Seguridad Vial (ONSV) del Ministerio de Transportes y Comunicaciones (MTC), disponibles en <https://www.onsv.gob.pe/datosabiertos>. Se emplearon tres bases: siniestros fatales, personas involucradas y vehículos involucrados. Las tres comparten el campo **código de siniestro**, que permite vincularlas.
+
+Se adoptan las definiciones del ONSV:
+
+- **Siniestro de tránsito fatal:** hecho que involucra uno o más vehículos en una vía pública o privada y que ocasiona, como mínimo, el fallecimiento de una persona.
+- **Persona fallecida:** persona cuya muerte ocurre en el lugar del siniestro o dentro de los 30 días posteriores como consecuencia de este. Se excluyen los casos determinados como suicidio por la autoridad competente.
+- **Persona lesionada:** persona herida a consecuencia del siniestro que requiere asistencia médica.
+- **Víctima:** término que comprende a las personas fallecidas y lesionadas.
+
+Estas definiciones permiten distinguir el número de eventos del número de personas afectadas, ya que un mismo siniestro puede involucrar a varias víctimas.
+
+La unidad de análisis es el siniestro fatal. La base de siniestros, con un registro por evento, se utilizó como tabla principal. Las bases de personas y vehículos contienen varios registros por siniestro, por lo que se resumieron por código de siniestro antes de integrarse. De este modo se preservó, durante todo el análisis, la equivalencia de una fila por siniestro.
+
+### 2.2 Preparación e integración de la información
+
+Tras una exploración inicial de la estructura y el contenido de las tres bases, se estandarizaron los nombres de las variables y los campos territoriales (departamento, provincia y distrito). Luego se seleccionaron los siniestros ocurridos en las provincias de Lima y Callao. Sus códigos definieron el universo para filtrar las tablas de personas y vehículos, de forma que los tres conjuntos correspondieran al mismo ámbito.
+
+De la tabla de siniestros se conservaron las variables de:
+
+- identificación y temporalidad;
+- localización;
+- características del evento y de la vía;
+- factores causales.
+
+Se descartaron los campos con cobertura insuficiente, como los relativos a señalización.
+
+A partir de la fecha y la hora se derivaron el año, el mes, el día de la semana, la hora, la ocurrencia en fin de semana y el período del día:
+
+- madrugada: 00:00–05:59;
+- mañana: 06:00–11:59;
+- tarde: 12:00–17:59;
+- noche: 18:00–23:59.
+
+Se añadieron, además, indicadores del total de víctimas, de la presencia de lesionados y de los siniestros con más de un fallecido.
+
+En la tabla de personas se estandarizaron el tipo de usuario, la gravedad, el sexo, el estado de la licencia de conducir y el resultado del dosaje etílico. Los registros de edad sin información se recodificaron como valores perdidos. Para cada siniestro se calcularon:
+
+- el número de personas según gravedad y tipo de usuario;
+- su distribución por sexo y edad;
+- los indicadores de licencia y dosaje etílico de los conductores.
+
+En la tabla de vehículos, los tipos registrados se agruparon en seis categorías, más una residual:
+
+- vehículos motorizados de dos o tres ruedas;
+- vehículos livianos;
+- vehículos de carga;
+- ómnibus o minibuses;
+- vehículos no motorizados o de micromovilidad;
+- vehículos no identificados.
+
+Para cada siniestro se calcularon la cantidad de vehículos por categoría y los indicadores de transporte público, SOAT, inspección técnica vehicular y fuga del vehículo.
+
+Ambos resúmenes se integraron a la tabla de siniestros. Tras cada unión se verificó que el número de registros se mantuviera y que cada código apareciera una sola vez. El resultado es la **base maestra**.
+
+### 2.3 Delimitación temporal y espacial
+
+El análisis se restringe al período 2021–2024. La base del ONSV incluye 98 registros de 2025, pero solo cubren de enero a mayo. Incorporarlos en una comparación anual sugeriría una reducción inexistente.
+
+Las coordenadas de los siniestros se convirtieron en un objeto espacial de puntos en WGS 84 (EPSG:4326). Para las operaciones métricas, se proyectaron a WGS 84 / UTM zona 18S (EPSG:32718). Como marco territorial se utilizó la capa de límites distritales del Instituto Nacional de Estadística e Informática (INEI) de 2023, vigente a la fecha de elaboración. De ella se seleccionaron los distritos de Lima y Callao, proyectados al mismo sistema.
+
+### 2.4 Validación de la información
+
+Se aplicaron cuatro controles de consistencia:
+
+- la unicidad del código de siniestro;
+- la ausencia de registros duplicados tras las uniones;
+- la cantidad de valores faltantes por variable;
+- la correspondencia entre el número de fallecidos de la tabla de siniestros y el obtenido a partir de la tabla de personas.
+
+La validación espacial comparó el distrito consignado por el ONSV con el polígono distrital en el que se ubica cada coordenada. Dos registros quedaron fuera del ámbito cartográfico y 52 se localizaron en un distrito distinto del consignado.
+
+Estos 52 registros se encuentran todos a menos de 100 metros de un límite distrital. Su distancia mediana al límite es de unos 3.5 metros, frente a casi 500 metros en los registros coincidentes. No se trata, por tanto, de errores aleatorios de georreferenciación. Son siniestros ocurridos sobre los propios límites, que en Lima suelen coincidir con avenidas como la Av. Universitaria, la Av. Brasil o la Panamericana.
+
+En consecuencia, cada siniestro se asignó al distrito donde se ubica su coordenada (asignación cartográfica), incluidos los 52 no coincidentes. La discrepancia se reporta como indicador de calidad y no como criterio de exclusión. Los análisis generales y temporales emplean los 1,658 siniestros del período. Los análisis territoriales emplean los 1,656 localizados dentro del ámbito cartográfico.
+
+### 2.5 Fuentes complementarias
+
+- **Red vial principal de Lima:** capa Sistema Vial Metropolitano del Instituto Metropolitano de Planificación (IMP), con vías expresas, arteriales y colectoras.
+- **Red vial principal del Callao:** capa del Plan de Desarrollo Metropolitano del Callao al 2040 (PDM Callao 2040), de la Municipalidad Provincial del Callao (MPC). Se seleccionaron la red vial y las avenidas de la capa de calles urbanas, para obtener una red comparable con la de Lima.
+- **Población distrital:** Censos Nacionales 2025: XIII de Población, VIII de Vivienda y IV de Comunidades Indígenas, del INEI, según los límites del Registro Nacional de Límites.
+
+Cada red se recortó a su provincia, para evitar duplicar vías en el límite entre ambas. Luego se normalizaron los nombres de las vías y se agruparon sus clasificaciones en tres clases:
+
+- expresa o nacional;
+- arterial;
+- colectora o avenida.
+
+La proporción de siniestros ubicados sobre la red se verificó con radios de 25, 50 y 100 metros.
+
+### 2.6 Análisis temporal
+
+La evolución anual se evaluó con dos pruebas:
+
+- una prueba exacta de Poisson entre 2021 y 2024;
+- una regresión de Poisson con tendencia lineal para 2021–2024.
+
+Ambas pruebas tratan los siniestros fatales como conteos de eventos discretos, relativamente poco frecuentes e independientes entre sí, cuya variabilidad aleatoria se describe con la distribución de Poisson. Esto permite distinguir un cambio real de la fluctuación esperable entre un año y otro. La prueba exacta de Poisson compara directamente los conteos de 2021 y 2024 sin recurrir a aproximaciones, por lo que responde si el último año difiere del primero; su limitación es que ignora los años intermedios. La regresión de Poisson con tendencia lineal complementa ese resultado: utiliza los cuatro años y estima la variación anual promedio, de modo que la conclusión no dependa de que uno de los años extremos sea atípico. Como todos los años tienen la misma duración, los conteos son comparables sin un denominador; sin embargo, ninguna de las pruebas considera cambios en el volumen de tránsito (ver 5.5). Además, si los conteos presentaran más variabilidad que la supuesta por la distribución de Poisson, los valores p serían algo optimistas; con solo cuatro años, esa sobredispersión no puede estimarse.
+
+La serie mensual se analizó solo de forma descriptiva, porque cuatro años son insuficientes para contrastar formalmente la estacionalidad.
+
+Para descomponer la evolución según el tipo de vía, los siniestros de la Panamericana Norte y Sur (PE-1N y PE-1S) se identificaron mediante el código de carretera registrado por el ONSV. Como contraste independiente, se identificaron también por su localización: siniestros ubicados a menos de 50 metros de un tramo de la Panamericana en el Sistema Vial Metropolitano. Las variaciones 2021–2024 de cada tipo de vía y de cada ramal se evaluaron con la prueba exacta de Poisson.
+
+La relación entre el día de la semana y el período del día se evaluó con pruebas chi cuadrado de independencia y su intensidad con la V de Cramér. Además, la participación de la madrugada se calculó por año, para controlar el efecto de las restricciones nocturnas vigentes en 2021.
+
+### 2.7 Análisis territorial multiescala
+
+Los resultados de un análisis espacial pueden cambiar según el tamaño y la forma de las unidades en que se agregan los datos, fenómeno conocido como problema de la unidad espacial modificable (o MAUP por sus siglas en inglés). Para el estudio de la siniestralidad vial se recomienda, entre otras estrategias, usar datos desagregados y reportar análisis de sensibilidad sobre el alcance de este problema (Xu et al., 2018, p. 73). En esa línea, el análisis territorial combina tres aproximaciones.
+
+**a) Tramos de la red vial.** La red vial principal se dividió en tramos de aproximadamente 500 metros. Cada siniestro ubicado a menos de 50 metros de la red se asignó al tramo más cercano. Para cada tramo se calculó el número esperado de siniestros bajo una distribución proporcional a la longitud, dentro de cada clase de vía. Los tramos con un exceso significativo de siniestros se identificaron con una prueba de Poisson. Como análisis de sensibilidad, el cálculo se repitió con un valor esperado uniforme para toda la red. La vía como unidad de análisis es coherente con enfoques recientes que estudian la siniestralidad directamente sobre la red vial (Gilardi et al., 2022). Al igual que en el análisis temporal (ver 2.6), el número de siniestros de cada tramo se trata como un conteo de Poisson, cuya media es el valor esperado según la longitud y la clase de vía del tramo.
+
+**b) Concentraciones espaciales.** Para cubrir también los siniestros ocurridos fuera de la red principal, se construyeron mallas hexagonales sobre el área ubicada a menos de 1 kilómetro de la red vial. La escala principal es de 500 metros; las escalas de 250 y 1000 metros sirven como sensibilidad. En cada malla se calculó el estadístico local Gi\* de Getis y Ord (Ord y Getis, 1995).
+
+Se optó por un estadístico local, y no por uno global como el índice de Moran, porque el objetivo es localizar las concentraciones y no solo constatar que existen. Entre los estadísticos locales, el Gi\* se ajusta a la pregunta del estudio. Evalúa cada celda junto con sus vecinas, de modo que identifica agrupaciones de valores altos y no celdas aisladas con muchos casos. Otros indicadores locales, como el Moran local, buscan además valores atípicos frente a su entorno, algo que este estudio no necesita.
+
+La significancia se evaluó mediante permutaciones condicionales y no con la aproximación normal. La mayoría de las celdas no registra ningún siniestro, y con conteos tan asimétricos la aproximación normal es poco confiable; la inferencia analítica y la basada en permutaciones pueden identificar puntos calientes distintos (Bivand y Wong, 2018, pp. 19–21).
+
+Se emplearon 9,999 permutaciones porque el menor valor p que puede obtenerse es 1/(permutaciones + 1). Con 999 permutaciones sería 0.001, una resolución insuficiente para que los resultados resistan la corrección por comparaciones múltiples sobre miles de celdas. Con 9,999 baja a 0.0001. La semilla aleatoria se fija para que los resultados sean reproducibles.
+
+Solo se consideran robustas las celdas de 500 metros que resultan significativas en las tres escalas.
+
+**c) Tasas distritales.** Se calcularon dos tasas complementarias:
+
+- fallecidos por cada 100 mil habitantes al año;
+- fallecidos por cada 100 kilómetros de red vial principal al año.
+
+En los distritos con poca población o poca red, las tasas brutas son inestables: uno o dos fallecidos más bastan para llevarlas a los primeros lugares del ranking. Por ello, ambas se suavizaron con el estimador bayesiano empírico global de Marshall (1991). Este estimador acerca cada tasa bruta al promedio metropolitano en proporción a su inestabilidad. Las tasas de distritos con denominadores grandes cambian poco, y las de distritos pequeños se corrigen más. Así, los rankings reflejan diferencias sostenidas y no el azar de unos pocos casos. Se eligió la versión global, que usa el promedio de toda la metrópoli como referencia, para no suponer de antemano que los distritos vecinos tienen tasas similares.
+
+Los análisis de tramos y de celdas implican miles de pruebas simultáneas: 5,959 tramos y varios miles de celdas por escala. Con un umbral de 0.05 sin corrección, aun si no existiera ninguna concentración real, cerca de 300 tramos resultarían significativos por azar. Por ello se aplicó la corrección de la tasa de falsos descubrimientos (FDR) de Benjamini y Hochberg (1995), que controla la proporción esperada de falsos positivos entre los resultados significativos. Se prefirió frente a correcciones más estrictas, como la de Bonferroni, que controlan la probabilidad de cometer un solo error en todo el conjunto. Con miles de pruebas, ese criterio se vuelve tan exigente que ocultaría concentraciones reales. Las pruebas locales sobre miles de unidades requieren este control de las comparaciones múltiples (Bivand y Wong, 2018, p. 4).
+
+### 2.8 Software
+
+El procesamiento y los análisis se realizaron en R `r getRversion()` (R Core Team, `r R.version$year`), con los siguientes paquetes:
+
+- **tidyverse** (dplyr, tidyr, stringr, lubridate, ggplot2): transformación de datos y gráficos.
+- **readxl**, **writexl** y **janitor**: lectura y escritura de archivos Excel y estandarización de nombres.
+- **sf** y **lwgeom**: operaciones espaciales y segmentación de la red vial.
+- **spdep**: estadístico Gi\* y suavización bayesiana empírica.
+- **leaflet**, **viridis** y **patchwork**: mapa interactivo, paletas de color y composición de figuras.
+- **knitr** y **rmarkdown**: generación del documento.
+
+## 3. Procesamiento de la información
+
+Esta sección documenta, con su código, la construcción de la base maestra, su validación y la preparación de las fuentes complementarias. Cada bloque de código va precedido de una explicación de lo que busca y de por qué se procede de esa manera.
+
+### 3.1 Librerías
+
+Se cargan los paquetes empleados en el procesamiento y el análisis. Su función se detalla en el apartado 2.8.
+
+```{r}
+# Cargado de librerías
+library(tidyverse)   # incluye dplyr, lubridate, stringr y ggplot2
+library(sf)
+library(leaflet)
+library(viridis)
+library(knitr)
+library(readxl)
+library(writexl)
+library(janitor)
+library(lwgeom)     # para la segmentación de la red vial
+library(spdep)      # para Gi* y suavización bayesiana empírica
+library(patchwork)  # para composición de mapas
+```
+
+### 3.2 Importación y exploración de las bases
+
+Las bases descargadas del ONSV son tres:
+
+- *BBDD ONSV - SINIESTROS FATALES 2021-2025 (preliminar).xlsx*
+- *BBDD ONSV - PERSONAS 2021-2025 (preliminar).xlsx*
+- *BBDD ONSV - VEHICULOS 2021-2025 (preliminar).xlsx*
+
+Las tres comparten el campo CÓDIGO SINIESTRO. La base de siniestros contiene 9,106 registros y 9,106 códigos distintos, es decir, un registro por siniestro. En las bases de personas y vehículos, en cambio, un mismo siniestro puede ocupar varias filas. Por ello, la base de siniestros se toma como tabla principal y las otras dos se resumen por siniestro antes de integrarse (ver 2.1).
+
+Las rutas de los archivos se definen en un solo bloque. Así, un cambio de ubicación de los datos solo requiere modificar estas líneas.
+
+```{r}
+ruta_siniestros <- "data/BBDD ONSV - SINIESTROS FATALES 2021-2025 (preliminar).xlsx"
+ruta_personas <- "data/BBDD ONSV - PERSONAS 2021-2025 (preliminar).xlsx"
+ruta_vehiculos <- "data/BBDD ONSV - VEHICULOS 2021-2025 (preliminar).xlsx"
+```
+
+Los archivos del ONSV incluyen cuatro filas de presentación antes de los encabezados. Por eso la lectura se inicia en la quinta fila (`skip = 4`).
+
+```{r}
+siniestros_raw <- read_excel(
+  ruta_siniestros,
+  sheet = "SINIESTROS",
+  skip = 4
+)
+
+personas_raw <- read_excel(
+  ruta_personas,
+  sheet = "PERSONAS INVOLUCRADAS",
+  skip = 4
+)
+
+vehiculos_raw <- read_excel(
+  ruta_vehiculos,
+  sheet = "VEHICULO INVOLUCRADOS",
+  skip = 4
+)
+```
+
+Antes de transformar las bases se revisan su estructura, las clases de sus variables y sus dimensiones. El objetivo es detectar campos mal tipificados o con valores inesperados. La última línea del primer bloque desactiva la notación científica en las salidas.
+
+```{r}
+# Siniestros
+summary(siniestros_raw)
+
+class(siniestros_raw)
+
+names(siniestros_raw)
+
+dim(siniestros_raw)
+
+options(scipen = 999)
+```
+
+```{r}
+# Personas
+summary(personas_raw)
+
+class(personas_raw)
+
+names(personas_raw)
+
+dim(personas_raw)
+```
+
+```{r}
+# Vehículos
+summary(vehiculos_raw)
+
+class(vehiculos_raw)
+
+names(vehiculos_raw)
+
+dim(vehiculos_raw)
+```
+
+La revisión confirma que los 9,106 registros de siniestros corresponden a 9,106 siniestros distintos. Las bases de personas y vehículos, en cambio, contienen varias observaciones por siniestro.
+
+### 3.3 Selección del ámbito y construcción de la base de siniestros
+
+Los nombres de las variables se estandarizan: minúsculas, sin tildes, espacios ni signos. Así pueden referirse en el código sin comillas y sin errores de codificación.
+
+```{r}
+siniestros <- siniestros_raw %>%
+  clean_names()
+
+personas <- personas_raw %>%
+  clean_names()
+
+vehiculos <- vehiculos_raw %>%
+  clean_names()
+
+names(siniestros)
+names(personas)
+names(vehiculos)
+```
+
+Los campos territoriales de las tres bases se normalizan, en mayúsculas y sin espacios redundantes. Esto evita que los filtros por provincia fallen por diferencias de escritura.
+
+```{r}
+siniestros <- siniestros %>%
+  mutate(
+    departamento = str_squish(str_to_upper(departamento)),
+    provincia = str_squish(str_to_upper(provincia)),
+    distrito = str_squish(str_to_upper(distrito))
+  )
+
+personas <- personas %>%
+  mutate(
+    departamento = str_squish(str_to_upper(departamento)),
+    provincia = str_squish(str_to_upper(provincia)),
+    distrito = str_squish(str_to_upper(distrito))
+  )
+
+vehiculos <- vehiculos %>%
+  mutate(
+    departamento = str_squish(str_to_upper(departamento)),
+    provincia = str_squish(str_to_upper(provincia)),
+    distrito = str_squish(str_to_upper(distrito))
+  )
+```
+
+Se seleccionan los registros de las provincias de Lima y Callao. El filtro exige que coincidan departamento y provincia, para que la selección sea explícita en ambos niveles.
+
+```{r}
+siniestros_lm <- siniestros %>%
+  filter(
+    (departamento == "LIMA" & provincia == "LIMA") |
+    (departamento == "CALLAO" & provincia == "CALLAO")
+  )
+
+personas_lm <- personas %>%
+  filter(
+    (departamento == "LIMA" & provincia == "LIMA") |
+    (departamento == "CALLAO" & provincia == "CALLAO")
+  )
+
+vehiculos_lm <- vehiculos %>%
+  filter(
+    (departamento == "LIMA" & provincia == "LIMA") |
+    (departamento == "CALLAO" & provincia == "CALLAO")
+  )
+```
+
+Las tablas de personas y vehículos se filtran nuevamente, esta vez a partir de los códigos de los siniestros seleccionados y no de sus propios campos territoriales. Esta segunda selección reemplaza a la anterior. Garantiza que las tres tablas correspondan exactamente al mismo universo, aunque algún registro de personas o vehículos consigne su ubicación de forma distinta.
+
+```{r}
+codigos_lm <- siniestros_lm %>%
+  distinct(codigo_siniestro)
+
+personas_lm <- personas %>%
+  semi_join(
+    codigos_lm,
+    by = "codigo_siniestro"
+  )
+
+vehiculos_lm <- vehiculos %>%
+  semi_join(
+    codigos_lm,
+    by = "codigo_siniestro"
+  )
+```
+
+Se comprueba el tamaño de cada universo y que la tabla de siniestros mantenga un registro por código.
+
+```{r}
+nrow(siniestros_lm)
+
+n_distinct(siniestros_lm$codigo_siniestro)
+
+nrow(personas_lm)
+
+n_distinct(personas_lm$codigo_siniestro)
+
+nrow(vehiculos_lm)
+
+n_distinct(vehiculos_lm$codigo_siniestro)
+
+nrow(siniestros_lm) ==
+  n_distinct(siniestros_lm$codigo_siniestro)
+```
+
+Se conservan las variables necesarias para los objetivos del estudio. Se excluyen, entre otras, las de señalización, por su alto porcentaje de valores faltantes (ver 2.2).
+
+```{r}
+siniestros_base <- siniestros_lm %>%
+  select(
+    codigo_siniestro,
+    fecha_siniestro,
+    hora_siniestro,
+    clase_siniestro,
+    cantidad_de_fallecidos,
+    cantidad_de_lesionados,
+    departamento,
+    provincia,
+    distrito,
+    zona,
+    tipo_de_via,
+    red_vial,
+    cod_carretera,
+    coordenadas_latitud,
+    coordenadas_longitud,
+    condicion_climatica,
+    zonificacion,
+    caracteristicas_de_via,
+    perfil_longitudinal_via,
+    superficie_de_calzada,
+    causa_factor_principal,
+    causa_especifica
+  )
+```
+
+La fecha está registrada como texto en formato día/mes/año. Se convierte a formato de fecha para poder derivar de ella variables temporales.
+
+```{r}
+siniestros_base <- siniestros_base %>%
+  mutate(
+    fecha_siniestro = dmy(fecha_siniestro)
+  )
+```
+
+De la fecha se derivan el año, el mes y el día de la semana. La semana se inicia el lunes, de modo que sábado y domingo aparezcan contiguos al final de tablas y gráficos.
+
+```{r}
+siniestros_base <- siniestros_base %>%
+  mutate(
+    anio = year(fecha_siniestro),
+    mes_num = month(fecha_siniestro),
+    mes = month(
+      fecha_siniestro,
+      label = TRUE,
+      abbr = FALSE
+    ),
+    dia_semana = wday(
+      fecha_siniestro,
+      label = TRUE,
+      abbr = FALSE,
+      week_start = 1
+    )
+  )
+```
+
+La hora, también registrada como texto, se convierte a formato horario y se extrae la hora entera. Este valor es necesario para clasificar los períodos del día.
+
+```{r}
+siniestros_base <- siniestros_base %>%
+  mutate(
+    hora_num = hour(hm(hora_siniestro))
+  )
+```
+
+Las horas se clasifican en cuatro períodos de seis horas (ver 2.2). Al tener la misma duración, los períodos pueden compararse entre sí sin que su extensión influya en los conteos.
+
+```{r}
+siniestros_base <- siniestros_base %>%
+  mutate(
+    periodo_dia = case_when(
+      hora_num >= 0  & hora_num < 6  ~ "Madrugada",
+      hora_num >= 6  & hora_num < 12 ~ "Mañana",
+      hora_num >= 12 & hora_num < 18 ~ "Tarde",
+      hora_num >= 18 & hora_num <= 23 ~ "Noche",
+      TRUE ~ NA_character_
+    )
+  )
+```
+
+Se identifica la ocurrencia en sábado o domingo. Esto permite comparar el patrón horario del fin de semana con el de los días laborables.
+
+```{r}
+siniestros_base <- siniestros_base %>%
+  mutate(
+    fin_semana = if_else(
+      wday(fecha_siniestro, week_start = 1) %in% c(6, 7),
+      "Sí",
+      "No"
+    )
+  )
+```
+
+Se construyen tres indicadores básicos de severidad:
+
+- el total de víctimas;
+- la presencia de lesionados;
+- la ocurrencia de dos o más fallecidos en el siniestro.
+
+```{r}
+siniestros_base <- siniestros_base %>%
+  mutate(
+    total_victimas =
+      cantidad_de_fallecidos +
+      cantidad_de_lesionados,
+
+    hay_lesionados = if_else(
+      cantidad_de_lesionados > 0,
+      "Sí",
+      "No"
+    ),
+
+    siniestro_multiple = if_else(
+      cantidad_de_fallecidos >= 2,
+      "Sí",
+      "No"
+    )
+  )
+```
+
+### 3.4 Resumen de personas por siniestro
+
+La tabla de personas se normaliza y se resume por siniestro. Cuatro decisiones explican la forma del código:
+
+- **Edad.** Se importó como texto porque algunos registros contienen el valor "NO INDICA". Esos casos se recodifican como valores perdidos antes de convertir la variable a número.
+- **Edad sin registro.** Las medidas de edad devuelven un valor perdido cuando ningún involucrado tiene edad registrada. Así se evitan valores infinitos.
+- **Conductores fugados.** Se cuentan como conductores, para no subestimar los indicadores de licencia y dosaje etílico.
+- **Dosaje positivo.** El indicador distingue los siniestros sin conductores evaluados (valor perdido) de los que tuvieron resultado negativo. Tratar ambos casos como "No" sobrestimaría los resultados negativos.
+
+```{r}
+personas_resumen <- personas_lm %>%
+  mutate(
+    tipo_persona = str_squish(str_to_upper(tipo_persona)),
+    gravedad = str_squish(str_to_upper(gravedad)),
+    sexo = str_squish(str_to_upper(sexo)),
+    estado_licencia = str_squish(str_to_upper(estado_licencia)),
+    resultado_del_dosaje_etilico_cualitativo =
+      str_squish(
+        str_to_upper(
+          resultado_del_dosaje_etilico_cualitativo
+        )
+      ),
+
+    # Limpieza de edad
+    edad = as.character(edad),
+    edad = na_if(edad, "NO INDICA"),
+    edad = as.numeric(edad)
+  ) %>%
+  
+  group_by(codigo_siniestro) %>%
+  
+  summarise(
+
+    # Cantidad total de personas
+    n_personas = n(),
+
+    # Según gravedad
+    n_personas_fallecidas =
+      sum(gravedad == "FALLECIDO", na.rm = TRUE),
+
+    n_personas_lesionadas =
+      sum(gravedad == "LESIONADO", na.rm = TRUE),
+
+    n_personas_ilesas =
+      sum(gravedad == "ILESO", na.rm = TRUE),
+
+    # Según condición de usuario
+    n_conductores =
+      sum(
+        tipo_persona %in%
+          c("CONDUCTOR", "CONDUCTOR FUGADO"),
+        na.rm = TRUE
+      ),
+
+    n_pasajeros =
+      sum(tipo_persona == "PASAJERO", na.rm = TRUE),
+
+    n_peatones =
+      sum(tipo_persona == "PEATÓN", na.rm = TRUE),
+
+    n_ocupantes =
+      sum(tipo_persona == "OCUPANTE", na.rm = TRUE),
+
+    # Fallecidos según tipo de usuario
+    n_conductores_fallecidos =
+      sum(
+        tipo_persona %in%
+          c("CONDUCTOR", "CONDUCTOR FUGADO") &
+          gravedad == "FALLECIDO",
+        na.rm = TRUE
+      ),
+
+    n_pasajeros_fallecidos =
+      sum(
+        tipo_persona == "PASAJERO" &
+          gravedad == "FALLECIDO",
+        na.rm = TRUE
+      ),
+
+    n_peatones_fallecidos =
+      sum(
+        tipo_persona == "PEATÓN" &
+          gravedad == "FALLECIDO",
+        na.rm = TRUE
+      ),
+
+    # Sexo
+    n_hombres =
+      sum(sexo == "MASCULINO", na.rm = TRUE),
+
+    n_mujeres =
+      sum(sexo == "FEMENINO", na.rm = TRUE),
+
+    # Edad
+    n_edad_conocida =
+      sum(!is.na(edad)),
+
+    edad_promedio =
+      if_else(
+        all(is.na(edad)),
+        NA_real_,
+        mean(edad, na.rm = TRUE)
+      ),
+
+    edad_min =
+      if_else(
+        all(is.na(edad)),
+        NA_real_,
+        min(edad, na.rm = TRUE)
+      ),
+
+    edad_max =
+      if_else(
+        all(is.na(edad)),
+        NA_real_,
+        max(edad, na.rm = TRUE)
+      ),
+
+    n_menores_18 =
+      if_else(
+        all(is.na(edad)),
+        NA_integer_,
+        as.integer(sum(edad < 18, na.rm = TRUE))
+      ),
+
+    n_adultos_mayores =
+      if_else(
+        all(is.na(edad)),
+        NA_integer_,
+        as.integer(sum(edad >= 60, na.rm = TRUE))
+      ),
+
+    # Licencia
+    n_conductores_sin_licencia =
+      sum(
+        tipo_persona %in%
+          c("CONDUCTOR", "CONDUCTOR FUGADO") &
+          estado_licencia == "SIN LICENCIA",
+        na.rm = TRUE
+      ),
+
+    n_conductores_licencia_no_vigente =
+      sum(
+        tipo_persona %in%
+          c("CONDUCTOR", "CONDUCTOR FUGADO") &
+          estado_licencia %in%
+          c(
+            "SIN LICENCIA",
+            "VENCIDA",
+            "SUSPENDIDA",
+            "CANCELADA",
+            "RETENIDA",
+            "INHABILITADO"
+          ),
+        na.rm = TRUE
+      ),
+
+    # Dosaje etílico
+    n_dosaje_registrado =
+      sum(
+        tipo_persona %in%
+          c("CONDUCTOR", "CONDUCTOR FUGADO") &
+          !is.na(resultado_del_dosaje_etilico_cualitativo),
+        na.rm = TRUE
+      ),
+
+    n_dosaje_positivo =
+      sum(
+        tipo_persona %in%
+          c("CONDUCTOR", "CONDUCTOR FUGADO") &
+          resultado_del_dosaje_etilico_cualitativo ==
+          "POSITIVO",
+        na.rm = TRUE
+      ),
+
+    .groups = "drop"
+  ) %>%
+
+  mutate(
+    hay_dosaje_positivo = case_when(
+      n_dosaje_positivo > 0 ~ "Sí",
+      n_dosaje_registrado > 0 ~ "No",
+      TRUE ~ NA_character_
+    )
+  )
+```
+
+### 3.5 Resumen de vehículos por siniestro
+
+Se normalizan los campos de texto de la tabla de vehículos, como paso previo a su clasificación.
+
+```{r}
+vehiculos_limpia <- vehiculos_lm %>%
+  mutate(
+    situacion_vehiculo =
+      str_squish(str_to_upper(situacion_vehiculo)),
+    
+    modalidad_de_transporte =
+      str_squish(str_to_upper(modalidad_de_transporte)),
+    
+    estado_soat =
+      str_squish(str_to_upper(estado_soat)),
+    
+    estado_citv =
+      str_squish(str_to_upper(estado_citv)),
+    
+    vehiculo =
+      str_squish(str_to_upper(vehiculo))
+  )
+```
+
+Las tipologías vehiculares del ONSV se agrupan en seis categorías, más una residual (ver 2.2). La agrupación produce grupos con un número de casos suficiente para el análisis.
+
+```{r}
+vehiculos_limpia <- vehiculos_limpia %>%
+  mutate(
+    grupo_vehiculo = case_when(
+      
+      vehiculo %in% c(
+        "MOTOCICLETA",
+        "MOTOCICLETA ELECTRICA",
+        "TRIMOTO PASAJERO",
+        "TRIMOTO CARGA",
+        "TRICICLO MOTORIZADO",
+        "BICIMOTO"
+      ) ~ "Vehículo motorizado de 2/3 ruedas",
+      
+      vehiculo %in% c(
+        "AUTOMÓVIL",
+        "STATION WAGON",
+        "CAMIONETA PICK UP",
+        "CAMIONETA RURAL",
+        "CAMIONETA PANEL"
+      ) ~ "Vehículo liviano",
+      
+      vehiculo %in% c(
+        "CAMIÓN",
+        "REMOLCADOR",
+        "SEMIREMOLQUE",
+        "REMOLQUE",
+        "REMOLCADOR-SEMIREMOLQUE"
+      ) ~ "Vehículo de carga",
+      
+      vehiculo %in% c(
+        "ÓMNIBUS",
+        "MINIBUS"
+      ) ~ "Ómnibus / Minibús",
+      
+      vehiculo %in% c(
+        "BICICLETA",
+        "TRICICLO NO MOTORIZADO",
+        "SCOOTER"
+      ) ~ "No motorizado / micromovilidad",
+      
+      vehiculo == "VEHICULO NO IDENTIFICADO" ~
+        "No identificado",
+      
+      TRUE ~ "Otros"
+    )
+  )
+```
+
+Se identifica si el vehículo prestaba servicio de transporte público: urbano, taxi o colectivo.
+
+```{r}
+vehiculos_limpia <- vehiculos_limpia %>%
+  mutate(
+    es_transporte_publico = case_when(
+      
+      modalidad_de_transporte %in% c(
+        "PUBLICO URBANO",
+        "TAXI",
+        "AUTO COLECTIVO"
+      ) ~ TRUE,
+      
+      TRUE ~ FALSE
+    )
+  )
+```
+
+Los vehículos se resumen por siniestro en dos pasos:
+
+- se calculan las cantidades por categoría y los indicadores de transporte público, SOAT, inspección técnica y fuga;
+- se derivan indicadores binarios de presencia para las variables que se usan en el análisis.
+
+```{r}
+vehiculos_resumen <- vehiculos_limpia %>%
+  group_by(codigo_siniestro) %>%
+  summarise(
+    
+    # Total
+    n_vehiculos = n(),
+    
+    # Tipología
+    n_motos_trimotos =
+      sum(
+        grupo_vehiculo ==
+          "Vehículo motorizado de 2/3 ruedas",
+        na.rm = TRUE
+      ),
+    
+    n_vehiculos_livianos =
+      sum(
+        grupo_vehiculo == "Vehículo liviano",
+        na.rm = TRUE
+      ),
+    
+    n_vehiculos_carga =
+      sum(
+        grupo_vehiculo == "Vehículo de carga",
+        na.rm = TRUE
+      ),
+    
+    n_omnibus_minibus =
+      sum(
+        grupo_vehiculo == "Ómnibus / Minibús",
+        na.rm = TRUE
+      ),
+    
+    n_no_motorizados =
+      sum(
+        grupo_vehiculo ==
+          "No motorizado / micromovilidad",
+        na.rm = TRUE
+      ),
+    
+    n_vehiculos_no_identificados =
+      sum(
+        grupo_vehiculo == "No identificado",
+        na.rm = TRUE
+      ),
+    
+    # Modalidad
+    n_transporte_publico =
+      sum(es_transporte_publico, na.rm = TRUE),
+    
+    # SOAT
+    n_soat_vencido =
+      sum(
+        estado_soat == "VENCIDO",
+        na.rm = TRUE
+      ),
+    
+    n_soat_no_registra =
+      sum(
+        estado_soat == "NO REGISTRA",
+        na.rm = TRUE
+      ),
+    
+    # CITV
+    n_citv_vencido =
+      sum(
+        estado_citv == "VENCIDO",
+        na.rm = TRUE
+      ),
+    
+    # Situación
+    n_vehiculos_fugados =
+      sum(
+        situacion_vehiculo == "FUGADO",
+        na.rm = TRUE
+      ),
+    
+    .groups = "drop"
+  ) %>%
+  
+  mutate(
+    
+    hay_moto_trimoto =
+      if_else(
+        n_motos_trimotos > 0,
+        "Sí",
+        "No"
+      ),
+    
+    hay_vehiculo_carga =
+      if_else(
+        n_vehiculos_carga > 0,
+        "Sí",
+        "No"
+      ),
+    
+    hay_transporte_publico =
+      if_else(
+        n_transporte_publico > 0,
+        "Sí",
+        "No"
+      ),
+    
+    hay_vehiculo_fugado =
+      if_else(
+        n_vehiculos_fugados > 0,
+        "Sí",
+        "No"
+      )
+  )
+```
+
+Antes de la integración se verifica que ambos resúmenes contengan un solo registro por siniestro. De lo contrario, la unión multiplicaría filas.
+
+```{r}
+nrow(personas_resumen) ==
+  n_distinct(personas_resumen$codigo_siniestro)
+
+nrow(vehiculos_resumen) ==
+  n_distinct(vehiculos_resumen$codigo_siniestro)
+```
+
+### 3.6 Integración y controles de consistencia
+
+Los resúmenes se incorporan a la tabla de siniestros mediante uniones por la izquierda. Este tipo de unión conserva todos los siniestros, aunque alguno no tenga registros asociados de personas o vehículos.
+
+```{r}
+base_maestra <- siniestros_base %>%
+  
+  left_join(
+    personas_resumen,
+    by = "codigo_siniestro"
+  ) %>%
+  
+  left_join(
+    vehiculos_resumen,
+    by = "codigo_siniestro"
+  )
+```
+
+Se comprueba que la base maestra mantenga un registro por siniestro.
+
+```{r}
+nrow(base_maestra)
+
+n_distinct(base_maestra$codigo_siniestro)
+
+nrow(base_maestra) ==
+  n_distinct(base_maestra$codigo_siniestro)
+```
+
+La base maestra contiene `r format(nrow(base_maestra), big.mark = ",")` registros, correspondientes al período de enero de 2021 a mayo de 2025 (ver 3.8), y el mismo número de códigos de siniestro distintos: una fila por siniestro fatal. Se verifica, además, que las uniones no hayan multiplicado registros.
+
+```{r}
+n_antes <- nrow(siniestros_base)
+n_despues <- nrow(base_maestra)
+
+n_antes
+n_despues
+
+n_antes == n_despues
+```
+
+El número de registros es el mismo antes y después de las uniones, por lo que ningún siniestro se duplicó al incorporar los resúmenes de personas y vehículos. Se contrasta el número de fallecidos consignado en la tabla de siniestros con el obtenido a partir de la tabla de personas. Es un control de coherencia entre las dos fuentes.
+
+```{r}
+base_maestra %>%
+  mutate(
+    coincide_fallecidos =
+      cantidad_de_fallecidos ==
+      n_personas_fallecidas
+  ) %>%
+  count(coincide_fallecidos)
+```
+
+El número de fallecidos coincide en `r format(sum(base_maestra$cantidad_de_fallecidos == base_maestra$n_personas_fallecidas, na.rm = TRUE), big.mark = ",")` de los `r format(nrow(base_maestra), big.mark = ",")` siniestros. Las tablas de siniestros y de personas son, por tanto, coherentes entre sí en la variable que define el universo de estudio. Se calcula el porcentaje de valores faltantes por variable. El objetivo es identificar las variables que deben interpretarse con cautela.
+
+```{r}
+tabla_na <- base_maestra %>%
+  summarise(
+    across(
+      everything(),
+      ~ sum(is.na(.))
+    )
+  ) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "n_na"
+  ) %>%
+  mutate(
+    porcentaje_na =
+      round(
+        n_na / nrow(base_maestra) * 100,
+        2
+      )
+  ) %>%
+  arrange(desc(porcentaje_na))
+
+head(tabla_na, 15)
+```
+
+```{r cifras-calidad, include = FALSE}
+na_de <- function(v) tabla_na$n_na[tabla_na$variable == v]
+pct_na_de <- function(v) round(tabla_na$porcentaje_na[tabla_na$variable == v], 1)
+vars_entorno <- c("condicion_climatica", "zonificacion", "caracteristicas_de_via",
+                  "perfil_longitudinal_via", "superficie_de_calzada")
+n_entorno_na <- sum(rowSums(is.na(base_maestra[, vars_entorno])) == length(vars_entorno))
+```
+
+Los valores faltantes siguen tres patrones:
+
+- **Dosaje etílico.** Es la variable con más vacíos: en `r format(na_de("hay_dosaje_positivo"), big.mark = ",")` siniestros (`r pct_na_de("hay_dosaje_positivo")`%) ningún conductor tiene un resultado registrado. Por ello no es posible evaluar el papel del alcohol (ver 5.2).
+
+- **Edad.** En `r na_de("edad_promedio")` siniestros (`r pct_na_de("edad_promedio")`%) ninguna persona involucrada tiene edad registrada. Los indicadores de edad describen, por tanto, solo a los siniestros restantes.
+
+- **Entorno de la vía.** Las cinco variables de entorno (condición climática, zonificación, características, perfil longitudinal y superficie de la calzada) faltan en `r na_de("condicion_climatica")` siniestros (`r pct_na_de("condicion_climatica")`%). En `r n_entorno_na` de ellos faltan las cinco a la vez, lo que indica registros incompletos en bloque más que omisiones aisladas.
+
+El resto de las variables tiene una cobertura prácticamente completa. En particular, el código de carretera falta en solo `r na_de("cod_carretera")` registro, lo que respalda su uso para identificar los siniestros ocurridos en la Panamericana (ver 4.2.2).
+
+### 3.7 Versión espacial de la base maestra
+
+Las coordenadas se convierten a formato numérico, requisito para crear la geometría.
+
+```{r}
+base_maestra <- base_maestra %>%
+  mutate(
+    coordenadas_latitud =
+      as.numeric(coordenadas_latitud),
+    
+    coordenadas_longitud =
+      as.numeric(coordenadas_longitud)
+  )
+```
+
+La versión espacial se crea en un objeto separado, para conservar intacta la base tabular. Se excluyen los registros sin coordenadas y se mantienen las columnas originales de latitud y longitud.
+
+```{r}
+base_maestra_sf <- base_maestra %>%
+  
+  filter(
+    !is.na(coordenadas_longitud),
+    !is.na(coordenadas_latitud)
+  ) %>%
+  
+  st_as_sf(
+    coords = c(
+      "coordenadas_longitud",
+      "coordenadas_latitud"
+    ),
+    crs = 4326,
+    remove = FALSE
+  )
+```
+
+Se proyecta al sistema WGS 84 / UTM zona 18S (EPSG:32718). Sus unidades en metros permiten calcular distancias y áreas.
+
+```{r}
+base_maestra_utm <- base_maestra_sf %>%
+  st_transform(32718)
+```
+
+### 3.8 Orden, exportación y control final
+
+Las variables se reordenan en diez bloques temáticos, para facilitar la consulta de la base exportada.
+
+```{r}
+base_maestra <- base_maestra %>%
+  select(
+
+    # 1. IDENTIFICACIÓN
+    codigo_siniestro,
+
+    # 2. TEMPORALIDAD
+    fecha_siniestro,
+    anio,
+    mes_num,
+    mes,
+    dia_semana,
+    hora_siniestro,
+    hora_num,
+    periodo_dia,
+    fin_semana,
+
+    # 3. LOCALIZACIÓN TERRITORIAL
+    departamento,
+    provincia,
+    distrito,
+    zona,
+
+    # 4. GEOREFERENCIACIÓN
+    coordenadas_latitud,
+    coordenadas_longitud,
+
+    # 5. CARACTERÍSTICAS DEL SINIESTRO
+    clase_siniestro,
+    cantidad_de_fallecidos,
+    cantidad_de_lesionados,
+    total_victimas,
+    hay_lesionados,
+    siniestro_multiple,
+
+    # 6. CARACTERÍSTICAS DE LA VÍA Y ENTORNO
+    tipo_de_via,
+    red_vial,
+    cod_carretera,
+    condicion_climatica,
+    zonificacion,
+    caracteristicas_de_via,
+    perfil_longitudinal_via,
+    superficie_de_calzada,
+
+    # 7. CAUSALIDAD
+    causa_factor_principal,
+    causa_especifica,
+
+    # 8. PERSONAS INVOLUCRADAS
+    n_personas,
+    n_personas_fallecidas,
+    n_personas_lesionadas,
+    n_personas_ilesas,
+
+    n_conductores,
+    n_pasajeros,
+    n_peatones,
+    n_ocupantes,
+
+    n_conductores_fallecidos,
+    n_pasajeros_fallecidos,
+    n_peatones_fallecidos,
+
+    n_hombres,
+    n_mujeres,
+
+    n_edad_conocida,
+    edad_promedio,
+    edad_min,
+    edad_max,
+    n_menores_18,
+    n_adultos_mayores,
+
+    # 9. CONDUCTORES Y FACTORES HUMANOS
+    n_conductores_sin_licencia,
+    n_conductores_licencia_no_vigente,
+    n_dosaje_registrado,
+    n_dosaje_positivo,
+    hay_dosaje_positivo,
+
+    # 10. VEHÍCULOS INVOLUCRADOS
+    n_vehiculos,
+    n_motos_trimotos,
+    n_vehiculos_livianos,
+    n_vehiculos_carga,
+    n_omnibus_minibus,
+    n_no_motorizados,
+    n_vehiculos_no_identificados,
+    n_transporte_publico,
+
+    n_soat_vencido,
+    n_soat_no_registra,
+    n_citv_vencido,
+    n_vehiculos_fugados,
+
+    hay_moto_trimoto,
+    hay_vehiculo_carga,
+    hay_transporte_publico,
+    hay_vehiculo_fugado
+  )
+```
+
+La base maestra se exporta en CSV, para su uso fuera de R. Los archivos exportados, en este formato y en el GeoPackage siguiente, conservan los `r format(nrow(base_maestra), big.mark = ",")` registros del período completo disponible, de enero de 2021 a mayo de 2025. La restricción al período de análisis se aplica después (ver 3.9).
+
+```{r}
+write_csv(
+  base_maestra,
+  "results/base_maestra_siniestros_Lima_Callao.csv"
+)
+```
+
+La versión espacial se exporta en GeoPackage, para su consulta en QGIS u otro SIG.
+
+```{r}
+st_write(
+  base_maestra_sf,
+  "results/base_maestra_siniestros_Lima_Callao.gpkg",
+  layer = "siniestros_fatales",
+  delete_layer = TRUE
+)
+```
+
+Control final de integridad: número de registros y de variables, unicidad de los códigos y ausencia de duplicados. Con este control concluye la construcción de la base maestra.
+
+```{r}
+# Número de registros
+nrow(base_maestra)
+
+# Número de variables
+ncol(base_maestra)
+
+# Número de códigos de siniestro únicos
+n_distinct(base_maestra$codigo_siniestro)
+
+# Comprobar que cada fila corresponde a un siniestro
+nrow(base_maestra) ==
+  n_distinct(base_maestra$codigo_siniestro)
+
+# Duplicados
+base_maestra %>%
+  count(codigo_siniestro) %>%
+  filter(n > 1)
+```
+
+El bloque siguiente está desactivado. Permite retomar el análisis a partir del CSV exportado sin repetir la construcción de la base. Para usarlo, la ruta debe apuntar a la carpeta `results/`, donde se guardó el archivo.
+
+```{r}
+#base_maestra <- read_csv(
+#  "data/base_maestra_siniestros_Lima_Callao.csv",
+#  show_col_types = FALSE
+#)
+```
+
+Los controles de integridad y de valores faltantes en las variables clave se resumen en una sola tabla. Estas variables son la fecha, el distrito y las coordenadas, de las que dependen los análisis temporales y espaciales.
+
+```{r}
+control_base <- base_maestra %>%
+  summarise(
+    n_registros = n(),
+    n_codigos_unicos = n_distinct(codigo_siniestro),
+    codigos_duplicados = n() - n_distinct(codigo_siniestro),
+    fechas_faltantes = sum(is.na(fecha_siniestro)),
+    distritos_faltantes = sum(is.na(distrito)),
+    latitudes_faltantes = sum(is.na(coordenadas_latitud)),
+    longitudes_faltantes = sum(is.na(coordenadas_longitud))
+  )
+
+control_base
+```
+
+Se revisa la distribución de los registros por provincia, distrito y año. Del total, `r format(sum(base_maestra$anio %in% 2021:2024), big.mark = ",")` registros corresponden a 2021–2024 y `r sum(base_maestra$anio == 2025)` a 2025, año que solo cubre de enero a mayo. Por ello, en el apartado siguiente el análisis se restringe a los cuatro años completos (ver 2.3).
+
+```{r}
+base_maestra %>%
+  count(departamento, provincia, name = "n_siniestros")
+
+base_maestra %>%
+  summarise(
+    n_distritos_con_registros = n_distinct(distrito)
+  )
+
+base_maestra %>%
+  count(anio, name = "n_siniestros") %>%
+  arrange(anio)
+```
+
+### 3.9 Período de análisis y validación espacial
+
+La base se restringe al período 2021–2024. Los registros de 2025 solo cubren de enero a mayo, por lo que se excluyen para no sugerir una reducción inexistente (ver 2.3).
+
+```{r}
+base_maestra_analisis <- base_maestra %>%
+  filter(anio %in% 2021:2024)
+
+nrow(base_maestra_analisis)
+```
+
+Se aplica el mismo filtro al objeto espacial.
+
+```{r}
+base_maestra_analisis_sf <- base_maestra_sf %>%
+  filter(anio %in% 2021:2024)
+```
+
+Se comprueban la clase, el sistema de referencia, el tipo de geometría y el número de registros del objeto espacial.
+
+```{r}
+class(base_maestra_sf)
+
+st_crs(base_maestra_sf)
+
+st_geometry_type(base_maestra_sf) %>%
+  table()
+
+nrow(base_maestra_analisis_sf)
+```
+
+Los límites distritales provienen de la capa de 2023 del INEI, descargada de [INEI - Descarga de capas cartográficas](https://ide.inei.gob.pe/#capas). Se importan y se revisan sus campos, su sistema de referencia y su tipo de geometría.
+
+```{r}
+distritos_raw <- st_read(
+  "data/limite_distrital_2023.gpkg",
+  quiet = TRUE
+) %>%
+  clean_names()
+
+names(distritos_raw)
+
+st_crs(distritos_raw)
+
+st_geometry_type(distritos_raw) %>%
+  table()
+```
+
+Los distritos de Lima y Callao se seleccionan por los cuatro primeros dígitos del ubigeo (1501 y 0701), un criterio más robusto que los nombres. El ubigeo se completa con ceros a la izquierda porque, si se importa como número, pierde el cero inicial de los códigos del Callao. Además, las geometrías se corrigen para evitar errores en las operaciones espaciales.
+
+```{r}
+distritos_lima_callao <- distritos_raw %>%
+  mutate(
+    ubigeo = str_pad(
+      as.character(ubigeo),
+      width = 6,
+      side = "left",
+      pad = "0"
+    ),
+    codigo_provincia = str_sub(ubigeo, 1, 4)
+  ) %>%
+  filter(
+    codigo_provincia %in% c("1501", "0701")
+  ) %>%
+  select(
+    ubigeo,
+    departamento_geo = nombdep,
+    provincia_geo = nombprov,
+    distrito_geo = nombdist
+  ) %>%
+  st_make_valid()
+```
+
+Los nombres distritales de ambas fuentes se normalizan, sin tildes ni diferencias de escritura. Esto es necesario porque la validación compara el distrito consignado por el ONSV con el de la cartografía. Para tablas y etiquetas se define, además, una tabla con los nombres oficiales acentuados.
+
+```{r}
+normalizar_nombre <- function(x) {
+  x %>%
+    str_squish() %>%
+    str_to_upper() %>%
+    stringi::stri_trans_general("Latin-ASCII")
+}
+
+base_maestra_analisis_sf <- base_maestra_analisis_sf %>%
+  mutate(
+    distrito_base = normalizar_nombre(distrito)
+  )
+
+distritos_lima_callao <- distritos_lima_callao %>%
+  mutate(
+    distrito_geo_normalizado =
+      normalizar_nombre(distrito_geo)
+  )
+
+# Nombres oficiales con tildes, para tablas y etiquetas
+
+nombres_distritos <- c(
+  "ANCON" = "Ancón", "ATE" = "Ate", "BARRANCO" = "Barranco",
+  "BELLAVISTA" = "Bellavista", "BRENA" = "Breña", "CALLAO" = "Callao",
+  "CARABAYLLO" = "Carabayllo",
+  "CARMEN DE LA LEGUA REYNOSO" = "Carmen de la Legua Reynoso",
+  "CHACLACAYO" = "Chaclacayo", "CHORRILLOS" = "Chorrillos",
+  "CIENEGUILLA" = "Cieneguilla", "COMAS" = "Comas",
+  "EL AGUSTINO" = "El Agustino", "INDEPENDENCIA" = "Independencia",
+  "JESUS MARIA" = "Jesús María", "LA MOLINA" = "La Molina",
+  "LA PERLA" = "La Perla", "LA PUNTA" = "La Punta",
+  "LA VICTORIA" = "La Victoria", "LIMA" = "Lima", "LINCE" = "Lince",
+  "LOS OLIVOS" = "Los Olivos", "LURIGANCHO" = "Lurigancho",
+  "LURIN" = "Lurín", "MAGDALENA DEL MAR" = "Magdalena del Mar",
+  "MI PERU" = "Mi Perú", "MIRAFLORES" = "Miraflores",
+  "PACHACAMAC" = "Pachacámac", "PUCUSANA" = "Pucusana",
+  "PUEBLO LIBRE" = "Pueblo Libre", "PUENTE PIEDRA" = "Puente Piedra",
+  "PUNTA HERMOSA" = "Punta Hermosa", "PUNTA NEGRA" = "Punta Negra",
+  "RIMAC" = "Rímac", "SAN BARTOLO" = "San Bartolo",
+  "SAN BORJA" = "San Borja", "SAN ISIDRO" = "San Isidro",
+  "SAN JUAN DE LURIGANCHO" = "San Juan de Lurigancho",
+  "SAN JUAN DE MIRAFLORES" = "San Juan de Miraflores",
+  "SAN LUIS" = "San Luis", "SAN MARTIN DE PORRES" = "San Martín de Porres",
+  "SAN MIGUEL" = "San Miguel", "SANTA ANITA" = "Santa Anita",
+  "SANTA MARIA DEL MAR" = "Santa María del Mar",
+  "SANTA ROSA" = "Santa Rosa", "SANTIAGO DE SURCO" = "Santiago de Surco",
+  "SURQUILLO" = "Surquillo", "VENTANILLA" = "Ventanilla",
+  "VILLA EL SALVADOR" = "Villa El Salvador",
+  "VILLA MARIA DEL TRIUNFO" = "Villa María del Triunfo"
+)
+
+etiquetar_distrito <- function(x) {
+  clave <- normalizar_nombre(x)
+  unname(coalesce(nombres_distritos[clave], str_to_title(x)))
+}
+```
+
+Ambas capas se proyectan al mismo sistema de coordenadas, requisito para las operaciones espaciales.
+
+```{r}
+base_maestra_analisis_sf_utm <-
+  base_maestra_analisis_sf %>%
+  st_transform(32718)
+
+distritos_lima_callao_utm <-
+  distritos_lima_callao %>%
+  st_transform(32718)
+```
+
+Cada siniestro se asocia al polígono distrital que lo contiene y se clasifica en una de tres categorías:
+
+- distrito coincidente;
+- distrito no coincidente;
+- fuera del ámbito cartográfico.
+
+```{r}
+base_maestra_validada <- base_maestra_analisis_sf_utm %>%
+  st_join(
+    distritos_lima_callao_utm %>%
+      select(
+        ubigeo,
+        departamento_geo,
+        provincia_geo,
+        distrito_geo,
+        distrito_geo_normalizado
+      ),
+    join = st_within,
+    left = TRUE
+  ) %>%
+  mutate(
+    validacion_espacial = case_when(
+      is.na(ubigeo) ~
+        "Fuera del ámbito cartográfico",
+
+      distrito_base == distrito_geo_normalizado ~
+        "Distrito coincidente",
+
+      TRUE ~
+        "Distrito no coincidente"
+    )
+  )
+```
+
+Se cuenta el número de registros de cada categoría.
+
+```{r}
+base_maestra_validada %>%
+  st_drop_geometry() %>%
+  count(validacion_espacial)
+```
+
+Se listan los registros no coincidentes o fuera del ámbito, para su revisión.
+
+```{r}
+casos_revisar <- base_maestra_validada %>%
+  filter(
+    validacion_espacial != "Distrito coincidente"
+  ) %>%
+  st_drop_geometry() %>%
+  select(
+    codigo_siniestro,
+    anio,
+    departamento,
+    provincia,
+    distrito,
+    distrito_geo,
+    coordenadas_longitud,
+    coordenadas_latitud,
+    validacion_espacial
+  )
+
+casos_revisar
+```
+
+Para entender el origen de las discrepancias, se calcula la distancia de cada siniestro al límite distrital más cercano.
+
+```{r}
+limites_distritales <- distritos_lima_callao_utm %>%
+  st_boundary() %>%
+  st_union()
+
+base_maestra_validada <- base_maestra_validada %>%
+  mutate(
+    distancia_limite_m = as.numeric(
+      st_distance(base_maestra_validada, limites_distritales)
+    )
+  )
+
+distancia_por_validacion <- base_maestra_validada %>%
+  st_drop_geometry() %>%
+  group_by(validacion_espacial) %>%
+  summarise(
+    n = n(),
+    `Mediana de distancia al límite (m)` = round(median(distancia_limite_m), 1),
+    `% a menos de 100 m del límite` = round(100 * mean(distancia_limite_m < 100), 1),
+    .groups = "drop"
+  ) %>%
+  rename(`Validación espacial` = validacion_espacial)
+
+knitr::kable(
+  distancia_por_validacion,
+  align = c("l", "r", "r", "r"),
+  caption = "Distancia de los registros al límite distrital más cercano"
+)
+```
+
+Los registros no coincidentes se concentran sobre los límites distritales, que en Lima suelen coincidir con avenidas. Por ello, cada siniestro se asigna al distrito donde se ubica su coordenada, y solo se excluyen los registros fuera del ámbito cartográfico (ver 2.4). El objeto `base_maestra_validada` es la fuente de los análisis de la sección 4.
+
+### 3.10 Red vial principal y población
+
+Se integran la red del Sistema Vial Metropolitano (Lima) y la del PDM Callao 2040. Cada capa se recorta a su provincia, para no duplicar vías en el límite común. Los nombres se normalizan para que una misma vía tenga un solo nombre en ambas fuentes; por ejemplo, "Vía Panamericana Norte" y "Carretera Panamericana Norte" pasan a "Panamericana Norte". Las clasificaciones originales se agrupan en tres clases comparables (ver 2.5).
+
+```{r}
+normalizar_via <- function(x) {
+  x %>%
+    str_to_upper() %>%
+    stringi::stri_trans_general("Latin-ASCII") %>%
+    str_replace_all("\\(.*?\\)", "") %>%
+    str_remove("^(AVENIDA|AV\\.?|VIA|CARRETERA|JIRON|JR\\.?|CALLE|PROLONGACION|PROL\\.?)\\s+") %>%
+    str_remove("^(VIA|CARRETERA)\\s+") %>%
+    str_replace("GAMBETA$", "GAMBETTA") %>%
+    str_squish()
+}
+
+provincias_utm <- distritos_lima_callao_utm %>%
+  mutate(provincia = if_else(str_sub(ubigeo, 1, 2) == "07", "CALLAO", "LIMA")) %>%
+  group_by(provincia) %>%
+  summarise(.groups = "drop")
+
+# Lima: Sistema Vial Metropolitano (IMP). type = 5 convierte MULTICURVE en MULTILINESTRING
+red_lima <- st_read("data/red_vial_lima.gpkg", quiet = TRUE, type = 5) %>%
+  st_zm() %>%
+  st_transform(32718) %>%
+  transmute(
+    nombre = normalizar_via(NOMBRE_1),
+    clasif = CLASIF_1,
+    fuente = "IMP - Sistema Vial Metropolitano"
+  ) %>%
+  st_intersection(provincias_utm %>% filter(provincia == "LIMA") %>% select())
+
+# Callao: capa de red vial y avenidas del PDM Callao 2040 (MPC)
+red_callao <- st_read("data/red_vial_callao.gpkg", quiet = TRUE) %>%
+  st_zm() %>%
+  st_transform(32718) %>%
+  filter(
+    layer == "B_070101_Red_vial" |
+      str_detect(NOM_VIA, "^(AVENIDA|AV\\.? )")
+  ) %>%
+  transmute(
+    nombre = normalizar_via(NOM_VIA),
+    clasif = coalesce(CLAS_VIA, "AVENIDA URBANA"),
+    fuente = "MPC - PDM Callao 2040"
+  ) %>%
+  st_intersection(provincias_utm %>% filter(provincia == "CALLAO") %>% select())
+
+red_vial_principal <- bind_rows(red_lima, red_callao) %>%
+  st_collection_extract("LINESTRING") %>%
+  st_cast("LINESTRING") %>%
+  mutate(
+    nombre = if_else(nombre %in% c("", "-", "SN", "S/N"), NA_character_, nombre),
+    nombre = case_when(
+      str_detect(nombre, "PANAMERICANA NORTE") ~ "PANAMERICANA NORTE",
+      str_detect(nombre, "PANAMERICANA SUR") & !str_detect(nombre, "ANTIGUA") ~ "PANAMERICANA SUR",
+      TRUE ~ nombre
+    ),
+    clase_via = case_when(
+      str_detect(clasif, "EXPRESA|NACIONAL") ~ "Expresa o nacional",
+      str_detect(clasif, "ARTERIAL|DEPARTAMENTAL") ~ "Arterial",
+      TRUE ~ "Colectora o avenida"
+    )
+  )
+
+red_vial_principal %>%
+  st_drop_geometry() %>%
+  mutate(km = as.numeric(st_length(red_vial_principal)) / 1000) %>%
+  group_by(Fuente = fuente) %>%
+  summarise(`Longitud (km)` = round(sum(km), 1), .groups = "drop") %>%
+  knitr::kable(caption = "Longitud de la red vial principal por fuente")
+```
+
+Se mide la distancia de cada siniestro a la vía principal más cercana. Luego se calcula la proporción de siniestros ubicados sobre la red con tres radios distintos. La comparación sustenta el radio de 50 metros: captura la mayoría de los siniestros ocurridos en la red principal sin incorporar eventos de calles locales.
+
+```{r}
+idx_red <- st_nearest_feature(base_maestra_validada, red_vial_principal)
+
+base_maestra_validada <- base_maestra_validada %>%
+  mutate(
+    distancia_red_m = as.numeric(
+      st_distance(base_maestra_validada, red_vial_principal[idx_red, ], by_element = TRUE)
+    ),
+    via_cercana = red_vial_principal$nombre[idx_red]
+  )
+
+tabla_radios <- tibble(radio = c(25, 50, 100)) %>%
+  mutate(
+    `% de siniestros sobre la red` = map_dbl(
+      radio, ~ round(100 * mean(base_maestra_validada$distancia_red_m < .x), 1)
+    ),
+    `Siniestros en la Panamericana (localización)` = map_int(
+      radio, ~ sum(
+        base_maestra_validada$distancia_red_m < .x &
+          str_detect(coalesce(base_maestra_validada$via_cercana, ""), "^PANAMERICANA (NORTE|SUR)$")
+      )
+    )
+  ) %>%
+  rename(`Radio (m)` = radio)
+
+knitr::kable(
+  tabla_radios,
+  caption = "Sensibilidad de la asignación de siniestros a la red vial según el radio"
+)
+```
+
+Se importa la población censada de 2025 por distrito. Los archivos del INEI incluyen filas de encabezado y de subtotales. Por eso solo se conservan las filas con ubigeo de seis dígitos, que corresponden a distritos. La tabla resume el número de distritos y la población de cada provincia. Esta población se emplea como denominador de las tasas por habitante (ver 4.5).
+
+```{r}
+leer_poblacion <- function(ruta) {
+  read_excel(
+    ruta,
+    skip = 5,
+    col_names = c("nro", "ubigeo", "dep", "prov", "distrito", "poblacion", "hombres", "mujeres")
+  ) %>%
+    filter(str_detect(ubigeo, "^\\d{6}$")) %>%
+    transmute(ubigeo, poblacion = as.numeric(poblacion))
+}
+
+poblacion_2025 <- bind_rows(
+  leer_poblacion("data/poblacion_censo2025_lima.xlsx"),
+  leer_poblacion("data/poblacion_censo2025_callao.xlsx")
+)
+
+pob_provincia <- poblacion_2025 %>%
+  mutate(Provincia = if_else(str_sub(ubigeo, 1, 4) == "0701", "Callao", "Lima")) %>%
+  group_by(Provincia) %>%
+  summarise(Distritos = n(), Población = sum(poblacion), .groups = "drop") %>%
+  arrange(desc(Población))
+
+pob_provincia %>%
+  bind_rows(
+    tibble(
+      Provincia = "Total",
+      Distritos = sum(pob_provincia$Distritos),
+      Población = sum(pob_provincia$Población)
+    )
+  ) %>%
+  mutate(
+    `% de la población` = round(100 * Población / sum(pob_provincia$Población), 1),
+    Población = format(Población, big.mark = ",", trim = TRUE)
+  ) %>%
+  knitr::kable(
+    align = c("l", "r", "r", "r"),
+    caption = "Población censada 2025 de Lima y Callao por provincia"
+  )
+```
+
+## 4. Resultados
+
+```{r cifras-formato, include = FALSE}
+# Funciones y valores auxiliares para las cifras del texto
+f_num <- function(x, d = 0) formatC(x, format = "f", digits = d, big.mark = ",")
+f_pct <- function(x, d = 1) paste0(formatC(x, format = "f", digits = d), "%")
+f_p <- function(p) if (p < 0.001) "p < 0.001" else paste0("p ≈ ", round(p, if (p < 0.01) 3 else 2))
+f_lista <- function(x) knitr::combine_words(x, and = " y ", oxford_comma = FALSE)
+n_total <- nrow(base_maestra_validada)
+n_ambito <- sum(!is.na(base_maestra_validada$distrito_geo))
+```
+
+Los resultados se organizan en nueve apartados:
+
+- Los apartados 4.1 a 4.3 caracterizan el universo y su comportamiento temporal. Abarcan la magnitud de los siniestros, su evolución anual y mensual (incluida la comparación entre la Panamericana y el resto de la red) y su distribución según día y período del día.
+- Los apartados 4.4 a 4.8 abordan las diferencias territoriales a distintas escalas: frecuencias, tasas y cambios distritales, tramos críticos de la red vial y concentraciones hexagonales.
+- El apartado 4.9 presenta un mapa interactivo para consultar los eventos de forma individual.
+
+Los análisis generales y temporales consideran los `r f_num(n_total)` siniestros del período. Los análisis territoriales consideran los `r f_num(n_ambito)` localizados dentro del ámbito cartográfico (ver 2.4).
+
+### 4.1 Caracterización general de la siniestralidad
+
+Se presentan dos grupos de indicadores:
+
+- **Magnitudes absolutas** de tres universos relacionados, pero distintos: personas fallecidas, siniestros fatales y personas lesionadas.
+- **Proporciones:** peatones entre las personas fallecidas, siniestros con al menos una motocicleta o trimoto, y siniestros ocurridos en fin de semana.
+
+```{r fig-indicadores-generales}
+# Resumen de indicadores
+
+resumen_indicadores <- base_maestra_validada %>%
+  st_drop_geometry() %>%
+  summarise(
+    total_siniestros = n(),
+
+    total_fallecidos =
+      sum(cantidad_de_fallecidos, na.rm = TRUE),
+
+    total_lesionados =
+      sum(cantidad_de_lesionados, na.rm = TRUE),
+
+    peatones_fallecidos =
+      sum(n_peatones_fallecidos, na.rm = TRUE),
+
+    siniestros_moto =
+      sum(hay_moto_trimoto == "Sí", na.rm = TRUE),
+
+    siniestros_fin_semana =
+      sum(fin_semana == "Sí", na.rm = TRUE)
+  )
+
+# ----------------------------------------------------------
+# Gráfico 1: cantidades absolutas
+# ----------------------------------------------------------
+
+indicadores_absolutos <- tibble(
+  indicador = c(
+    "Siniestros fatales",
+    "Personas fallecidas",
+    "Personas lesionadas"
+  ),
+
+  valor = c(
+    resumen_indicadores$total_siniestros,
+    resumen_indicadores$total_fallecidos,
+    resumen_indicadores$total_lesionados
+  )
+) %>%
+
+  mutate(
+    indicador = forcats::fct_reorder(
+      indicador,
+      valor
+    )
+  )
+
+grafico_absolutos <- indicadores_absolutos %>%
+  ggplot(
+    aes(
+      x = valor,
+      y = indicador
+    )
+  ) +
+
+  geom_col(
+    width = 0.65,
+    fill = "#4C78A8"
+  ) +
+
+  geom_text(
+    aes(
+      label = scales::comma(
+        valor,
+        big.mark = ","
+      )
+    ),
+    hjust = -0.15,
+    size = 3.5
+  ) +
+
+  scale_x_continuous(
+    labels = scales::label_number(
+      big.mark = ",",
+      accuracy = 1
+    ),
+
+    expand = expansion(
+      mult = c(0, 0.16)
+    )
+  ) +
+
+  labs(
+    title = "Magnitudes generales de la siniestralidad vial fatal",
+    subtitle = "Lima y Callao, 2021–2024",
+    x = "Cantidad",
+    y = NULL,
+    caption = paste(
+      "Fuente: ONSV. Elaboración propia."
+    )
+  ) +
+
+  theme_minimal(
+    base_size = 11
+  ) +
+
+  theme(
+    plot.title = element_text(
+      size = 15,
+      face = "bold",
+      hjust = 0
+    ),
+
+    plot.subtitle = element_text(
+      size = 11,
+      hjust = 0
+    ),
+
+    plot.caption = element_text(
+      size = 8,
+      hjust = 0,
+      margin = margin(t = 8)
+    ),
+
+    axis.title = element_text(size = 10),
+    axis.text = element_text(size = 9),
+
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+
+    plot.title.position = "plot",
+    plot.caption.position = "plot"
+  )
+
+grafico_absolutos
+
+# ----------------------------------------------------------
+# Gráfico 2: características porcentuales
+# ----------------------------------------------------------
+
+indicadores_porcentuales <- tibble(
+  indicador = c(
+    "Peatones respecto de\npersonas fallecidas",
+    "Siniestros con motos\no trimotos",
+    "Siniestros ocurridos\nen fin de semana"
+  ),
+
+  porcentaje = c(
+    100 *
+      resumen_indicadores$peatones_fallecidos /
+      resumen_indicadores$total_fallecidos,
+
+    100 *
+      resumen_indicadores$siniestros_moto /
+      resumen_indicadores$total_siniestros,
+
+    100 *
+      resumen_indicadores$siniestros_fin_semana /
+      resumen_indicadores$total_siniestros
+  )
+) %>%
+
+  mutate(
+    indicador = forcats::fct_reorder(
+      indicador,
+      porcentaje
+    )
+  )
+
+grafico_porcentuales <- indicadores_porcentuales %>%
+  ggplot(
+    aes(
+      x = porcentaje,
+      y = indicador
+    )
+  ) +
+
+  geom_col(
+    width = 0.65,
+    fill = "#2A9D8F"
+  ) +
+
+  geom_text(
+    aes(
+      label = paste0(
+        scales::number(
+          porcentaje,
+          accuracy = 0.1,
+          decimal.mark = "."
+        ),
+        "%"
+      )
+    ),
+    hjust = -0.15,
+    size = 3.5
+  ) +
+
+  scale_x_continuous(
+    labels = scales::label_percent(
+      scale = 1,
+      accuracy = 1
+    ),
+
+    limits = c(
+      0,
+      max(
+        indicadores_porcentuales$porcentaje
+      ) * 1.18
+    ),
+
+    expand = expansion(
+      mult = c(0, 0)
+    )
+  ) +
+
+  labs(
+    title = "Características relativas de la siniestralidad vial fatal",
+    subtitle = "Lima y Callao, 2021–2024",
+    x = "Porcentaje",
+    y = NULL,
+    caption = paste(
+      "Fuente: ONSV. Elaboración propia.",
+      "Los indicadores utilizan denominadores diferentes."
+    )
+  ) +
+
+  theme_minimal(
+    base_size = 11
+  ) +
+
+  theme(
+    plot.title = element_text(
+      size = 15,
+      face = "bold",
+      hjust = 0
+    ),
+
+    plot.subtitle = element_text(
+      size = 11,
+      hjust = 0
+    ),
+
+    plot.caption = element_text(
+      size = 8,
+      hjust = 0,
+      margin = margin(t = 8)
+    ),
+
+    axis.title = element_text(size = 10),
+    axis.text = element_text(size = 9),
+
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank(),
+
+    plot.title.position = "plot",
+    plot.caption.position = "plot"
+  )
+
+grafico_porcentuales
+```
+
+Entre 2021 y 2024 se registraron `r f_num(resumen_indicadores$total_siniestros)` siniestros de tránsito fatales en Lima y Callao. En ellos fallecieron `r f_num(resumen_indicadores$total_fallecidos)` personas y resultaron lesionadas `r f_num(resumen_indicadores$total_lesionados)`. La primera cifra corresponde a eventos y las otras dos a personas, por lo que no son partes de un mismo total.
+
+De las `r f_num(resumen_indicadores$total_fallecidos)` personas fallecidas, `r f_num(resumen_indicadores$peatones_fallecidos)` eran peatones (`r f_pct(100 * resumen_indicadores$peatones_fallecidos / resumen_indicadores$total_fallecidos)`). Además, `r f_num(resumen_indicadores$siniestros_moto)` siniestros (`r f_pct(100 * resumen_indicadores$siniestros_moto / resumen_indicadores$total_siniestros)`) involucraron al menos una motocicleta o trimoto. Otros `r f_num(resumen_indicadores$siniestros_fin_semana)` (`r f_pct(100 * resumen_indicadores$siniestros_fin_semana / resumen_indicadores$total_siniestros)`) ocurrieron en sábado o domingo.
+
+Destacan la elevada participación de peatones entre las víctimas fatales y la presencia relevante de vehículos de dos o tres ruedas. Estos porcentajes describen la composición de los registros, no el riesgo de cada grupo de usuarios.
+
+### 4.2 Evolución anual y mensual, 2021–2024
+
+El análisis temporal sigue tres pasos:
+
+1.  Examina el número anual de siniestros, para determinar si a escala metropolitana aumentaron, disminuyeron o fluctuaron.
+2.  Descompone esa evolución según el tipo de vía.
+3.  La desagrega por mes, para identificar variaciones que los totales anuales ocultan.
+
+#### 4.2.1 Evolución anual
+
+```{r fig-evolucion-anual}
+# Número de siniestros por año
+
+siniestros_anuales <- base_maestra_validada %>%
+  st_drop_geometry() %>%
+
+  count(
+    anio,
+    name = "n_siniestros"
+  ) %>%
+
+  arrange(anio)
+
+# Valores de inicio y cierre
+
+valor_2021 <- siniestros_anuales %>%
+  filter(anio == 2021) %>%
+  pull(n_siniestros)
+
+valor_2024 <- siniestros_anuales %>%
+  filter(anio == 2024) %>%
+  pull(n_siniestros)
+
+# Variación porcentual acumulada
+
+variacion_acumulada <- (
+  valor_2024 / valor_2021 - 1
+) * 100
+
+# Año con mayor registro
+
+anio_pico <- siniestros_anuales %>%
+  slice_max(
+    n_siniestros,
+    n = 1,
+    with_ties = FALSE
+  ) %>%
+  pull(anio)
+
+siniestros_anuales <- siniestros_anuales %>%
+  mutate(
+    tipo_anio = if_else(
+      anio == anio_pico,
+      "Año con mayor registro",
+      "Otros años"
+    )
+  )
+
+# Gráfico
+
+grafico_anual <- siniestros_anuales %>%
+  ggplot(
+    aes(
+      x = factor(anio),
+      y = n_siniestros,
+      fill = tipo_anio
+    )
+  ) +
+
+  geom_col(
+    width = 0.68
+  ) +
+
+  geom_text(
+    aes(
+      label = scales::comma(
+        n_siniestros,
+        big.mark = ","
+      )
+    ),
+    vjust = -0.45,
+    size = 3.6
+  ) +
+
+  annotate(
+    geom = "label",
+    x = 2.5,
+
+    y = max(
+      siniestros_anuales$n_siniestros
+    ) * 1.16,
+
+    label = sprintf(
+      "Variación 2021–2024: %+.1f%%",
+      variacion_acumulada
+    ),
+
+    fill = "#FFFFFF",
+    color = "#303030",
+    size = 3.4,
+    linewidth = 0.25
+  ) +
+
+  scale_fill_manual(
+    values = c(
+      "Otros años" = "#B8BEC4",
+      "Año con mayor registro" = "#D55E00"
+    )
+  ) +
+
+  scale_y_continuous(
+    labels = scales::label_number(
+      big.mark = ",",
+      accuracy = 1
+    ),
+
+    expand = expansion(
+      mult = c(0, 0.24)
+    )
+  ) +
+
+  labs(
+    title = "Evolución anual de los siniestros de tránsito fatales",
+
+    subtitle = paste0(
+      "Lima y Callao, 2021–2024. ",
+      "El mayor registro se produjo en ",
+      anio_pico,
+      "."
+    ),
+
+    x = "Año",
+    y = "Número de siniestros",
+
+    caption = paste(
+      "Fuente: ONSV. Elaboración propia."
+    )
+  ) +
+
+  theme_minimal(
+    base_size = 11
+  ) +
+
+  theme(
+    plot.title = element_text(
+      size = 15,
+      face = "bold",
+      hjust = 0
+    ),
+
+    plot.subtitle = element_text(
+      size = 11,
+      hjust = 0
+    ),
+
+    plot.caption = element_text(
+      size = 8,
+      hjust = 0,
+      margin = margin(t = 8)
+    ),
+
+    axis.title = element_text(size = 10),
+    axis.text = element_text(size = 9),
+
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+
+    legend.position = "none",
+
+    plot.title.position = "plot",
+    plot.caption.position = "plot"
+  )
+
+grafico_anual
+```
+
+La serie aumentó entre 2021 y 2023. Pasó de `r valor_2021` siniestros en 2021 a `r siniestros_anuales$n_siniestros[2]` en 2022 y alcanzó su máximo en `r anio_pico`, con `r max(siniestros_anuales$n_siniestros)`. En 2024 se registraron `r valor_2024`, es decir, `r siniestros_anuales$n_siniestros[3] - valor_2024` menos que el año anterior, una disminución de `r f_pct(100 * (1 - valor_2024 / siniestros_anuales$n_siniestros[3]))`. Aun así, el valor de 2024 superó los de 2021 y 2022. Entre el primer y el último año, el aumento fue de `r valor_2024 - valor_2021` siniestros, una variación acumulada de `r f_pct(variacion_acumulada)`.
+
+Para evaluar si estas variaciones superan la fluctuación esperable en conteos anuales, se aplican dos pruebas (ver 2.6): una prueba exacta de Poisson entre 2021 y 2024, y una regresión de Poisson con tendencia lineal.
+
+```{r}
+prueba_2021_2024 <- poisson.test(c(valor_2024, valor_2021))
+
+modelo_tendencia <- glm(
+  n_siniestros ~ anio,
+  family = poisson,
+  data = siniestros_anuales
+)
+
+coef_tendencia <- summary(modelo_tendencia)$coefficients["anio", ]
+
+tabla_pruebas_anuales <- tibble(
+  Prueba = c(
+    "Prueba exacta de Poisson (2024 frente a 2021)",
+    "Regresión de Poisson: tendencia anual 2021–2024"
+  ),
+  Estimación = c(
+    sprintf("Razón de tasas = %.2f", prueba_2021_2024$estimate),
+    sprintf("Variación anual = %+.1f%%", 100 * (exp(coef_tendencia["Estimate"]) - 1))
+  ),
+  `Valor p` = round(
+    c(prueba_2021_2024$p.value, coef_tendencia["Pr(>|z|)"]),
+    3
+  )
+)
+
+knitr::kable(
+  tabla_pruebas_anuales,
+  align = c("l", "l", "r"),
+  caption = "Pruebas sobre la evolución anual de los siniestros fatales"
+)
+```
+
+La razón de tasas entre 2024 y 2021 es de `r f_num(prueba_2021_2024$estimate, 2)`. Su intervalo de confianza al 95% va de `r f_num(prueba_2021_2024$conf.int[1], 2)` a `r f_num(prueba_2021_2024$conf.int[2], 2)` (`r f_p(prueba_2021_2024$p.value)`). La tendencia anual tampoco es significativa (`r f_p(coef_tendencia["Pr(>|z|)"])`). Como el intervalo incluye tanto reducciones leves como aumentos moderados, la serie no permite afirmar un cambio en ninguna dirección.
+
+Además, 2021 no constituye una línea base neutral. Hasta mayo, Lima y el Callao tuvieron:
+
+- inmovilización social obligatoria de lunes a sábado, entre las 21:00 y las 04:00 horas;
+- inmovilización total los domingos;
+- prohibición de circular en vehículos particulares los domingos.
+
+(Presidencia del Consejo de Ministros [PCM], 2021a, art. 2, nums. 8.1 y 8.5.) Las restricciones nocturnas continuaron, con horarios más cortos, hasta fines de año (PCM, 2021b, art. 2, num. 8.1). Parte del aumento hacia 2022–2023 podría reflejar la recuperación de la movilidad y no necesariamente un deterioro de las condiciones de seguridad vial.
+
+En síntesis, la serie no muestra una reducción de la siniestralidad fatal. Creció hasta 2023 y disminuyó levemente en 2024, sin que las variaciones anuales sean estadísticamente concluyentes.
+
+#### 4.2.2 La Panamericana frente al resto de la red vial
+
+La base del ONSV registra el código de la carretera en la que ocurrió cada siniestro. Con ese campo pueden separarse los eventos de la Panamericana Norte y Sur (PE-1N y PE-1S), principal eje vial longitudinal de la metrópoli, de los ocurridos en el resto de la red (ver 2.6).
+
+```{r fig-panamericana-vs-resto}
+base_maestra_validada <- base_maestra_validada %>%
+  mutate(
+    via_pe1 = if_else(
+      coalesce(str_detect(cod_carretera, "^PE-1"), FALSE),
+      "Panamericana (PE-1N y PE-1S)",
+      "Resto de la red vial"
+    )
+  )
+
+serie_pe1 <- base_maestra_validada %>%
+  st_drop_geometry() %>%
+  count(anio, via_pe1, name = "n_siniestros")
+
+grafico_pe1 <- serie_pe1 %>%
+  ggplot(aes(x = anio, y = n_siniestros, color = via_pe1)) +
+  geom_line(linewidth = 1.1) +
+  geom_point(size = 3) +
+  geom_text(
+    aes(label = n_siniestros),
+    vjust = -1,
+    size = 3.6,
+    show.legend = FALSE
+  ) +
+  scale_color_manual(
+    values = c(
+      "Panamericana (PE-1N y PE-1S)" = "#D55E00",
+      "Resto de la red vial" = "#6B7280"
+    )
+  ) +
+  scale_y_continuous(
+    limits = c(0, 360),
+    breaks = seq(0, 350, 50)
+  ) +
+  labs(
+    title = "Siniestros fatales en la Panamericana y en el resto de la red",
+    subtitle = "Lima y Callao, 2021–2024",
+    x = NULL,
+    y = "Número de siniestros fatales",
+    color = NULL,
+    caption = paste(
+      "Fuente: ONSV. Elaboración propia a partir del campo código de carretera.",
+      sep = "\n"
+    )
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    plot.title = element_text(size = 15, face = "bold", hjust = 0),
+    plot.caption = element_text(size = 8, hjust = 0),
+    legend.position = "top",
+    panel.grid.minor = element_blank(),
+    plot.title.position = "plot",
+    plot.caption.position = "plot"
+  )
+
+grafico_pe1
+
+# Pruebas de Poisson por tipo de vía
+
+pruebas_pe1 <- serie_pe1 %>%
+  filter(anio %in% c(2021, 2024)) %>%
+  pivot_wider(names_from = anio, values_from = n_siniestros, names_prefix = "anio_") %>%
+  rowwise() %>%
+  mutate(
+    variacion = 100 * (anio_2024 / anio_2021 - 1),
+    p_valor = poisson.test(c(anio_2024, anio_2021))$p.value
+  ) %>%
+  ungroup()
+
+resumen_pe1 <- base_maestra_validada %>%
+  st_drop_geometry() %>%
+  group_by(via_pe1) %>%
+  summarise(
+    siniestros = n(),
+    fallecidos = sum(cantidad_de_fallecidos),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    pct_siniestros = 100 * siniestros / sum(siniestros),
+    pct_fallecidos = 100 * fallecidos / sum(fallecidos)
+  )
+
+tabla_pe1 <- pruebas_pe1 %>%
+  left_join(resumen_pe1, by = "via_pe1") %>%
+  transmute(
+    `Tipo de vía` = via_pe1,
+    `2021` = anio_2021,
+    `2024` = anio_2024,
+    `Variación 2021–2024` = sprintf("%+.1f%%", variacion),
+    `Valor p` = round(p_valor, 3),
+    `% de siniestros 2021–2024` = round(pct_siniestros, 1),
+    `% de fallecidos 2021–2024` = round(pct_fallecidos, 1)
+  )
+
+knitr::kable(
+  tabla_pe1,
+  align = c("l", rep("r", 6)),
+  caption = "Siniestros fatales en la Panamericana y en el resto de la red, 2021 y 2024"
+)
+```
+
+Los siniestros fatales en la Panamericana pasaron de `r pruebas_pe1$anio_2021[1]` en 2021 a `r pruebas_pe1$anio_2024[1]` en 2024. Es un aumento de `r f_pct(pruebas_pe1$variacion[1], 0)`, estadísticamente significativo (`r f_p(pruebas_pe1$p_valor[1])`). En el resto de la red vial pasaron de `r pruebas_pe1$anio_2021[2]` a `r pruebas_pe1$anio_2024[2]`, es decir, se mantuvieron prácticamente constantes. Todo el aumento metropolitano entre 2021 y 2024 ocurrió, por tanto, en la Panamericana.
+
+Durante el período completo, esta vía concentró `r resumen_pe1$siniestros[1]` siniestros (`r f_pct(resumen_pe1$pct_siniestros[1])` del total) y `r resumen_pe1$fallecidos[1]` personas fallecidas (`r f_pct(resumen_pe1$pct_fallecidos[1])`).
+
+Para descartar que el resultado dependa de cómo se registró el código de carretera, se contrasta con una asignación espacial independiente (ver 2.6):
+
+```{r}
+# Contraste con asignación espacial: red del Sistema Vial Metropolitano (IMP)
+# type = 5 convierte las geometrías MULTICURVE a MULTILINESTRING
+
+red_vial_svm <- st_read(
+  "data/red_vial_lima.gpkg",
+  quiet = TRUE,
+  type = 5
+) %>%
+  st_transform(st_crs(base_maestra_validada))
+
+idx_via <- st_nearest_feature(base_maestra_validada, red_vial_svm)
+
+base_maestra_validada <- base_maestra_validada %>%
+  mutate(
+    via_svm = red_vial_svm$NOMBRE_1[idx_via],
+    clasif_via_svm = red_vial_svm$CLASIF_1[idx_via],
+    distancia_via_m = as.numeric(
+      st_distance(base_maestra_validada, red_vial_svm[idx_via, ], by_element = TRUE)
+    ),
+    pe1_espacial = distancia_via_m < 50 & str_detect(via_svm, "PANAMERICANA")
+  )
+
+contraste_pe1 <- base_maestra_validada %>%
+  st_drop_geometry() %>%
+  group_by(Año = anio) %>%
+  summarise(
+    `PE-1 según código de carretera` = sum(via_pe1 == "Panamericana (PE-1N y PE-1S)"),
+    `PE-1 según localización (< 50 m)` = sum(pe1_espacial),
+    .groups = "drop"
+  )
+
+knitr::kable(
+  contraste_pe1,
+  align = c("l", "r", "r"),
+  caption = "Siniestros en la Panamericana según dos criterios independientes"
+)
+```
+
+```{r cifras-pe1, include = FALSE}
+es_pe1_codigo <- base_maestra_validada$via_pe1 == "Panamericana (PE-1N y PE-1S)"
+es_pe1_espacial <- coalesce(base_maestra_validada$pe1_espacial, FALSE)
+pct_coincidencia <- 100 * mean(es_pe1_codigo == es_pe1_espacial)
+pct_coincidencia_pe1 <- 100 * mean(es_pe1_espacial[es_pe1_codigo])
+```
+
+Ambos criterios coinciden en el `r f_pct(pct_coincidencia, 0)` de los registros (`r f_pct(pct_coincidencia_pe1, 0)` de los asignados a la PE-1 por su código) y muestran la misma evolución.
+
+El hallazgo no permite identificar sus causas. Entre las hipótesis plausibles están:
+
+- el aumento del tránsito en la vía;
+- la expansión urbana en los distritos que atraviesa, como Lurín, Puente Piedra y Ancón;
+- las condiciones de cruce peatonal en una vía expresa que funciona, a la vez, como eje urbano.
+
+Evaluarlas requeriría información de flujos vehiculares y de infraestructura.
+
+Al separar los ramales Norte y Sur, el comportamiento es muy distinto:
+
+```{r}
+ramales_pe1 <- base_maestra_validada %>%
+  st_drop_geometry() %>%
+  filter(str_detect(coalesce(cod_carretera, ""), "^PE-1")) %>%
+  mutate(ramal = if_else(str_detect(cod_carretera, "^PE-1S"), "Panamericana Sur (PE-1S)", "Panamericana Norte (PE-1N)")) %>%
+  count(ramal, anio) %>%
+  pivot_wider(names_from = anio, values_from = n, names_prefix = "a") %>%
+  rowwise() %>%
+  mutate(
+    variacion = sprintf("%+.0f%%", 100 * (a2024 / a2021 - 1)),
+    p = round(poisson.test(c(a2024, a2021))$p.value, 4)
+  ) %>%
+  ungroup()
+
+ramales_pe1 %>%
+  rename(Ramal = ramal, `2021` = a2021, `2022` = a2022, `2023` = a2023, `2024` = a2024,
+         `Variación 2021–2024` = variacion, `Valor p` = p) %>%
+  knitr::kable(caption = "Siniestros fatales por ramal de la Panamericana")
+```
+
+La Panamericana Norte se mantuvo relativamente estable: pasó de `r ramales_pe1$a2021[1]` a `r ramales_pe1$a2024[1]` siniestros (`r f_p(ramales_pe1$p[1])`). La Panamericana Sur, en cambio, duplicó con creces sus registros: pasó de `r ramales_pe1$a2021[2]` a `r ramales_pe1$a2024[2]` (`r f_p(ramales_pe1$p[2])`). El crecimiento metropolitano es, por tanto, un fenómeno localizado principalmente en el eje sur.
+
+#### 4.2.3 Evolución mensual
+
+```{r fig-evolucion-mensual}
+# Nombres abreviados de los meses
+
+nombres_meses <- c(
+  "Ene", "Feb", "Mar", "Abr",
+  "May", "Jun", "Jul", "Ago",
+  "Sep", "Oct", "Nov", "Dic"
+)
+
+# Número de siniestros por mes y año
+
+siniestros_mensuales <- base_maestra_validada %>%
+  st_drop_geometry() %>%
+
+  count(
+    anio,
+    mes_num,
+    name = "n_siniestros"
+  ) %>%
+
+  complete(
+    anio = 2021:2024,
+    mes_num = 1:12,
+
+    fill = list(
+      n_siniestros = 0
+    )
+  )
+
+# Colores por año
+
+colores_anios <- c(
+  "2021" = "#6A3D9A",
+  "2022" = "#56B4E9",
+  "2023" = "#009E73",
+  "2024" = "#D73027"
+)
+
+# Gráfico
+
+grafico_mensual <- siniestros_mensuales %>%
+  ggplot(
+    aes(
+      x = mes_num,
+      y = n_siniestros,
+      color = factor(anio),
+      group = anio
+    )
+  ) +
+
+  geom_line(
+    linewidth = 1
+  ) +
+
+  geom_point(
+    size = 2.4
+  ) +
+
+  scale_x_continuous(
+    breaks = 1:12,
+    labels = nombres_meses
+  ) +
+
+  scale_y_continuous(
+    labels = scales::label_number(
+      big.mark = ",",
+      accuracy = 1
+    ),
+
+    breaks = scales::pretty_breaks(
+      n = 5
+    )
+  ) +
+
+  scale_color_manual(
+    values = colores_anios
+  ) +
+
+  labs(
+    title = "Evolución mensual de los siniestros de tránsito fatales",
+    subtitle = "Lima y Callao, 2021–2024",
+    x = "Mes",
+    y = "Número de siniestros",
+    color = "Año",
+
+    caption = paste(
+      "Fuente: ONSV. Elaboración propia."
+    )
+  ) +
+
+  theme_minimal(
+    base_size = 11
+  ) +
+
+  theme(
+    plot.title = element_text(
+      size = 15,
+      face = "bold",
+      hjust = 0
+    ),
+
+    plot.subtitle = element_text(
+      size = 11,
+      hjust = 0
+    ),
+
+    plot.caption = element_text(
+      size = 8,
+      hjust = 0,
+      margin = margin(t = 8)
+    ),
+
+    axis.title = element_text(size = 10),
+    axis.text = element_text(size = 9),
+
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 9),
+    legend.position = "bottom",
+
+    panel.grid.minor = element_blank(),
+
+    plot.title.position = "plot",
+    plot.caption.position = "plot"
+  )
+
+grafico_mensual
+```
+
+```{r cifras-mensual, include = FALSE}
+meses_largos <- c("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+                  "agosto", "septiembre", "octubre", "noviembre", "diciembre")
+pico_mensual <- siniestros_mensuales %>% slice_max(n_siniestros, n = 1, with_ties = FALSE)
+```
+
+Las series mensuales muestran oscilaciones importantes dentro de cada año, y sus máximos y mínimos no coinciden entre años:
+
+- 2021: descensos en mayo y septiembre;
+- 2022: aumento hacia diciembre;
+- 2023: valores altos en junio y octubre.
+
+El valor mensual más alto del período se registró en `r meses_largos[pico_mensual$mes_num]` de `r pico_mensual$anio`, con `r pico_mensual$n_siniestros` siniestros.
+
+Ningún mes concentra de forma reiterada los máximos anuales. Por tanto, el aumento de los totales anuales no responde a un patrón mensual uniforme. Cuatro años, sin embargo, son insuficientes para contrastar formalmente la estacionalidad.
+
+### 4.3 Distribución según día de la semana y período del día
+
+Este apartado examina si los siniestros presentan patrones recurrentes dentro de la semana. Para ello se cruza el día de ocurrencia con los cuatro períodos del día definidos en el apartado 2.2. El cruce permite identificar las combinaciones con más eventos y comparar los días laborables con el fin de semana.
+
+```{r fig-dia-periodo}
+# Orden de las categorías temporales
+
+base_maestra_validada <- base_maestra_validada %>%
+  mutate(
+    periodo_dia = factor(
+      periodo_dia,
+      levels = c(
+        "Madrugada",
+        "Mañana",
+        "Tarde",
+        "Noche"
+      )
+    ),
+
+    dia_semana = factor(
+      as.character(dia_semana),
+      levels = c(
+        "lunes",
+        "martes",
+        "miércoles",
+        "jueves",
+        "viernes",
+        "sábado",
+        "domingo"
+      )
+    )
+  )
+
+# Conteo por día y periodo
+
+tabla_dia_periodo <- base_maestra_validada %>%
+  st_drop_geometry() %>%
+
+  count(
+    dia_semana,
+    periodo_dia,
+    name = "n_siniestros"
+  ) %>%
+
+  group_by(dia_semana) %>%
+
+  # Orden inferior-superior de las barras:
+  # Noche, Tarde, Mañana y Madrugada
+
+  arrange(
+    desc(periodo_dia),
+    .by_group = TRUE
+  ) %>%
+
+  mutate(
+    # Centro vertical de cada segmento
+
+    posicion_etiqueta =
+      cumsum(n_siniestros) -
+      n_siniestros / 2,
+
+    # Color según el fondo
+
+    color_etiqueta = case_when(
+      periodo_dia %in%
+        c("Madrugada", "Mañana") ~ "#FFFFFF",
+
+      TRUE ~ "#202020"
+    )
+  ) %>%
+
+  ungroup()
+
+# Total por día
+
+totales_dia <- tabla_dia_periodo %>%
+  group_by(dia_semana) %>%
+
+  summarise(
+    total_dia =
+      sum(n_siniestros),
+
+    .groups = "drop"
+  )
+
+# Gráfico
+
+grafico_dia_periodo <- tabla_dia_periodo %>%
+  ggplot(
+    aes(
+      x = dia_semana,
+      y = n_siniestros,
+      fill = periodo_dia
+    )
+  ) +
+
+  geom_col(
+    width = 0.72
+  ) +
+
+  # Cantidad centrada dentro de cada segmento
+
+  geom_text(
+    aes(
+      y = posicion_etiqueta,
+
+      label = scales::comma(
+        n_siniestros,
+        big.mark = ","
+      ),
+
+      color = color_etiqueta
+    ),
+
+    hjust = 0.5,
+    vjust = 0.5,
+    size = 3
+  ) +
+
+  # Total encima de cada barra
+
+  geom_text(
+    data = totales_dia,
+
+    aes(
+      x = dia_semana,
+      y = total_dia,
+
+      label = scales::comma(
+        total_dia,
+        big.mark = ","
+      )
+    ),
+
+    inherit.aes = FALSE,
+    vjust = -0.45,
+    hjust = 0.5,
+    size = 3.2,
+    fontface = "bold",
+    color = "#202020"
+  ) +
+
+  # Utiliza directamente los códigos de color
+  # definidos en color_etiqueta
+
+  scale_color_identity(
+    guide = "none"
+  ) +
+
+  scale_fill_viridis_d(
+    direction = 1
+  ) +
+
+  scale_x_discrete(
+    labels = stringr::str_to_title
+  ) +
+
+  scale_y_continuous(
+    labels = scales::label_number(
+      big.mark = ",",
+      accuracy = 1
+    ),
+
+    expand = expansion(
+      mult = c(0, 0.12)
+    )
+  ) +
+
+  labs(
+    title = "Distribución según día de la semana y periodo del día",
+    subtitle = "Lima y Callao, 2021–2024",
+    x = "Día de la semana",
+    y = "Número de siniestros",
+    fill = "Periodo del día",
+
+    caption = paste(
+      "Fuente: ONSV. Elaboración propia."
+    )
+  ) +
+
+  theme_minimal(
+    base_size = 11
+  ) +
+
+  theme(
+    plot.title = element_text(
+      size = 15,
+      face = "bold",
+      hjust = 0
+    ),
+
+    plot.subtitle = element_text(
+      size = 11,
+      hjust = 0
+    ),
+
+    plot.caption = element_text(
+      size = 8,
+      hjust = 0,
+      margin = margin(t = 8)
+    ),
+
+    axis.title = element_text(
+      size = 10
+    ),
+
+    axis.text = element_text(
+      size = 9
+    ),
+
+    legend.title = element_text(
+      size = 10
+    ),
+
+    legend.text = element_text(
+      size = 9
+    ),
+
+    legend.position = "bottom",
+
+    panel.grid.major.x =
+      element_blank(),
+
+    panel.grid.minor =
+      element_blank(),
+
+    axis.text.x = element_text(
+      angle = 40,
+      hjust = 1
+    ),
+
+    plot.title.position = "plot",
+    plot.caption.position = "plot"
+  )
+
+grafico_dia_periodo
+```
+
+```{r cifras-dia-periodo, include = FALSE}
+dias_orden <- totales_dia %>% arrange(desc(total_dia))
+dia_menor <- totales_dia %>% slice_min(total_dia, n = 1, with_ties = FALSE)
+combinaciones <- tabla_dia_periodo %>% arrange(desc(n_siniestros))
+madrugada_semana <- base_maestra_validada %>%
+  st_drop_geometry() %>%
+  group_by(fin_semana) %>%
+  summarise(total = n(), madrugada = sum(periodo_dia == "Madrugada", na.rm = TRUE), .groups = "drop") %>%
+  mutate(pct = 100 * madrugada / total)
+madr_finde <- filter(madrugada_semana, fin_semana == "Sí")
+madr_lab <- filter(madrugada_semana, fin_semana == "No")
+```
+
+El `r as.character(dias_orden$dia_semana[1])` registró el mayor número acumulado de siniestros (`r dias_orden$total_dia[1]`), seguido por el `r as.character(dias_orden$dia_semana[2])` (`r dias_orden$total_dia[2]`). El `r as.character(dia_menor$dia_semana)` presentó el menor total (`r dia_menor$total_dia`). En conjunto, sábado y domingo concentraron `r f_num(madr_finde$total)` eventos, el `r f_pct(100 * madr_finde$total / n_total)` del universo.
+
+La concentración del fin de semana no se reparte por igual entre las franjas horarias. La combinación más frecuente fue la `r tolower(combinaciones$periodo_dia[1])` del `r as.character(combinaciones$dia_semana[1])`, con `r combinaciones$n_siniestros[1]` siniestros. Le sigue la `r tolower(combinaciones$periodo_dia[2])` del `r as.character(combinaciones$dia_semana[2])`, con `r combinaciones$n_siniestros[2]`. La madrugada reunió `r madr_finde$madrugada` de los `r f_num(madr_finde$total)` siniestros del fin de semana (`r f_pct(madr_finde$pct)`). Entre lunes y viernes reunió `r madr_lab$madrugada` de `r f_num(madr_lab$total)` (`r f_pct(madr_lab$pct)`).
+
+Para evaluar si estas diferencias exceden lo esperable por azar, se aplica la prueba chi cuadrado de independencia. Esta prueba se considera adecuada porque relaciona dos variables categóricas, el día de la semana y el período del día, a partir de una tabla de frecuencias. La prueba calcula cuántos siniestros se esperarían en cada combinación si la distribución horaria fuera la misma todos los días, y mide cuánto se alejan de esos valores los conteos observados. Se aplica en dos versiones: con los siete días y con la distinción entre días laborables y fin de semana. Además, se calcula la participación de la madrugada por año, para controlar el efecto de las restricciones nocturnas de 2021 (ver 2.6):
+
+```{r}
+datos_dia_periodo <- base_maestra_validada %>%
+  st_drop_geometry() %>%
+  filter(!is.na(periodo_dia))
+
+chi_dia <- chisq.test(table(datos_dia_periodo$dia_semana, datos_dia_periodo$periodo_dia))
+chi_finde <- chisq.test(table(datos_dia_periodo$fin_semana, datos_dia_periodo$periodo_dia))
+
+tabla_chi <- tibble(
+  Prueba = c(
+    "Día de la semana × período del día",
+    "Fin de semana (sí/no) × período del día"
+  ),
+  `Chi cuadrado` = round(c(chi_dia$statistic, chi_finde$statistic), 1),
+  `Grados de libertad` = c(chi_dia$parameter, chi_finde$parameter),
+  `Valor p` = signif(c(chi_dia$p.value, chi_finde$p.value), 2)
+)
+
+knitr::kable(
+  tabla_chi,
+  align = c("l", "r", "r", "r"),
+  caption = "Pruebas de independencia entre día y período del día"
+)
+
+madrugada_por_anio <- datos_dia_periodo %>%
+  group_by(Año = anio) %>%
+  summarise(
+    `Madrugada, lunes a viernes (%)` =
+      round(100 * mean(periodo_dia[fin_semana == "No"] == "Madrugada"), 1),
+    `Madrugada, sábado y domingo (%)` =
+      round(100 * mean(periodo_dia[fin_semana == "Sí"] == "Madrugada"), 1),
+    .groups = "drop"
+  )
+
+knitr::kable(
+  madrugada_por_anio,
+  align = c("l", "r", "r"),
+  caption = "Participación de la madrugada en los siniestros de cada año"
+)
+```
+
+```{r cifras-chi, include = FALSE}
+v_cramer <- function(prueba) {
+  n <- sum(prueba$observed)
+  k <- min(dim(prueba$observed)) - 1
+  unname(sqrt(prueba$statistic / (n * k)))
+}
+v_dia <- v_cramer(chi_dia)
+v_finde <- v_cramer(chi_finde)
+```
+
+Ambas pruebas rechazan la hipótesis de independencia (`r if (f_p(chi_dia$p.value) == f_p(chi_finde$p.value)) paste(f_p(chi_dia$p.value), "en ambos casos") else paste(f_p(chi_dia$p.value), "y", f_p(chi_finde$p.value))`). Un valor p inferior a 0.001 significa que, si el día y el período del día fueran independientes, la probabilidad de observar diferencias como estas, o mayores, por simple azar sería menor de una en mil. El valor p no mide, sin embargo, la intensidad de la asociación. La V de Cramér, que va de 0 (independencia) a 1 (asociación total), es de `r f_num(v_dia, 2)` para los siete días y de `r f_num(v_finde, 2)` para la distinción entre días laborables y fin de semana. La asociación es, por tanto, débil pero real: la madrugada pesa más en el fin de semana, aunque en todos los días la mayoría de los siniestros ocurre en otras franjas. En los días laborables, la madrugada representó apenas el `r f_pct(madrugada_por_anio[[2]][1])` de los siniestros de 2021. En los años siguientes, esa proporción estuvo entre `r f_pct(min(madrugada_por_anio[[2]][-1]))` y `r f_pct(max(madrugada_por_anio[[2]][-1]))`, lo que es consistente con las restricciones nocturnas de 2021. Aun excluyendo ese año, la madrugada mantiene un peso mayor en el fin de semana que entre lunes y viernes. Se trata de una asociación temporal entre día y franja horaria, que no permite determinar las causas del patrón.
+
+La madrugada tiene, además, un componente vial:
+
+```{r}
+perfil_pe1 <- base_maestra_validada %>%
+  st_drop_geometry() %>%
+  group_by(`Tipo de vía` = via_pe1) %>%
+  summarise(
+    Siniestros = n(),
+    `De madrugada (%)` = round(100 * mean(periodo_dia == "Madrugada", na.rm = TRUE), 1),
+    `Con vehículo fugado (%)` = round(100 * mean(hay_vehiculo_fugado == "Sí"), 1),
+    `Peatones entre fallecidos (%)` = round(100 * sum(n_peatones_fallecidos) / sum(cantidad_de_fallecidos), 1),
+    .groups = "drop"
+  )
+
+knitr::kable(perfil_pe1, caption = "Perfil de los siniestros en la Panamericana y en el resto de la red")
+```
+
+```{r cifras-madrugada-pe1, include = FALSE}
+madrugadas <- base_maestra_validada %>% st_drop_geometry() %>% filter(periodo_dia == "Madrugada")
+pct_madr_en_pe1 <- 100 * mean(madrugadas$via_pe1 == "Panamericana (PE-1N y PE-1S)")
+razon_madrugada <- perfil_pe1[["De madrugada (%)"]][1] / perfil_pe1[["De madrugada (%)"]][2]
+razon_fuga <- perfil_pe1[["Con vehículo fugado (%)"]][1] / perfil_pe1[["Con vehículo fugado (%)"]][2]
+```
+
+En la Panamericana, el `r f_pct(perfil_pe1[["De madrugada (%)"]][1])` de los siniestros ocurrió de madrugada, frente al `r f_pct(perfil_pe1[["De madrugada (%)"]][2])` en el resto de la red. Es una proporción `r f_num(razon_madrugada, 1)` veces mayor. Esta vía concentró el `r f_pct(pct_madr_en_pe1, 0)` de todos los siniestros de madrugada del área metropolitana.
+
+La proporción de siniestros con vehículo fugado también es `r f_num(razon_fuga, 1)` veces mayor: `r f_pct(perfil_pe1[["Con vehículo fugado (%)"]][1])` frente a `r f_pct(perfil_pe1[["Con vehículo fugado (%)"]][2])`. Esto limita la información disponible sobre los responsables y plantea preguntas sobre el control y la vigilancia nocturna en la vía.
+
+### 4.4 Distribución y concentración de siniestros por distrito
+
+Para examinar las diferencias territoriales, se calcula el número acumulado de siniestros fatales de cada distrito durante 2021–2024. El cálculo usa la asignación cartográfica de los `r f_num(n_ambito)` eventos localizados en el ámbito de estudio. El mapa coroplético compara los 50 distritos y la tabla identifica los cinco con más registros.
+
+Los valores son frecuencias absolutas, no tasas de riesgo, porque no incorporan la exposición de cada distrito: población, superficie, flujo vehicular, número de viajes o longitud de la red vial. El apartado 4.5 aborda esa limitación con dos tasas.
+
+```{r fig-mapa-distrital}
+# Paleta secuencial YlOrRd
+
+paleta_ylorrd <- c(
+  "#FFFFCC",
+  "#FFEDA0",
+  "#FED976",
+  "#FEB24C",
+  "#FD8D3C",
+  "#FC4E2A",
+  "#E31A1C",
+  "#BD0026",
+  "#800026"
+)
+
+# Número de siniestros por distrito
+
+siniestros_distrito <- base_maestra_validada %>%
+  filter(
+    !is.na(distrito_geo)
+  ) %>%
+
+  st_drop_geometry() %>%
+
+  count(
+    ubigeo,
+    distrito_geo,
+    name = "n_siniestros"
+  ) %>%
+
+  arrange(
+    desc(n_siniestros)
+  )
+
+# Unión con los 50 distritos
+
+mapa_distrital <- distritos_lima_callao_utm %>%
+  left_join(
+    siniestros_distrito %>%
+      select(
+        ubigeo,
+        n_siniestros
+      ),
+
+    by = "ubigeo"
+  ) %>%
+
+  mutate(
+    n_siniestros =
+      replace_na(n_siniestros, 0)
+  )
+
+# Límites provinciales
+
+limites_provinciales_lc <-
+  distritos_lima_callao_utm %>%
+
+  group_by(
+    departamento_geo,
+    provincia_geo
+  ) %>%
+
+  summarise(
+    .groups = "drop"
+  )
+
+
+# Mapa
+
+grafico_mapa_distrital <- ggplot(
+  mapa_distrital
+) +
+
+  geom_sf(
+    aes(
+      fill = n_siniestros
+    ),
+    color = "#FFFFFF",
+    linewidth = 0.20
+  ) +
+
+  geom_sf(
+    data = limites_provinciales_lc,
+    fill = NA,
+    color = "#202020",
+    linewidth = 0.75
+  ) +
+
+  scale_fill_gradientn(
+    colors = paleta_ylorrd,
+
+    limits = c(
+      0,
+      max(
+        mapa_distrital$n_siniestros,
+        na.rm = TRUE
+      )
+    ),
+
+    breaks = scales::pretty_breaks(
+      n = 5
+    ),
+
+    labels = scales::label_number(
+      big.mark = ",",
+      accuracy = 1
+    ),
+
+    oob = scales::squish,
+    na.value = "#D9D9D9"
+  ) +
+
+  coord_sf(
+    datum = NA,
+    expand = FALSE
+  ) +
+
+  labs(
+    title = "Distribución acumulada de siniestros fatales/distrito",
+    subtitle = "Lima y Callao, 2021–2024",
+    fill = "Número de\nsiniestros",
+
+    caption = paste(
+      "Fuente: ONSV e INEI. Elaboración propia."
+    )
+  ) +
+
+  theme_void(
+    base_size = 11
+  ) +
+
+  theme(
+    plot.title = element_text(
+      size = 15,
+      face = "bold",
+      hjust = 0
+    ),
+
+    plot.subtitle = element_text(
+      size = 11,
+      hjust = 0
+    ),
+
+    plot.caption = element_text(
+      size = 8,
+      hjust = 0,
+      margin = margin(t = 8)
+    ),
+
+    legend.title = element_text(
+      size = 10
+    ),
+
+    legend.text = element_text(
+      size = 9
+    ),
+
+    legend.position = "right",
+
+    legend.box.spacing = grid::unit(
+      0.8,
+      "cm"
+    ),
+
+    legend.key.height = grid::unit(
+      1.3,
+      "cm"
+    ),
+
+    plot.margin = margin(
+      t = 6,
+      r = 18,
+      b = 6,
+      l = 6
+    ),
+
+    plot.title.position = "plot",
+    plot.caption.position = "plot"
+  )
+
+grafico_mapa_distrital
+
+# Tabla con los cinco distritos principales
+
+tabla_top5_distritos <- siniestros_distrito %>%
+  slice_head(n = 5) %>%
+
+  mutate(
+    distrito_geo = etiquetar_distrito(distrito_geo)
+  ) %>%
+
+  select(
+    Distrito = distrito_geo,
+    `Número de siniestros` = n_siniestros
+  )
+
+knitr::kable(
+  tabla_top5_distritos,
+  align = c("l", "r"),
+
+  caption = paste(
+    "Cinco distritos con mayor número",
+    "de siniestros fatales, 2021–2024"
+  )
+)
+```
+
+```{r cifras-distritos, include = FALSE}
+top5 <- slice_head(siniestros_distrito, n = 5)
+top5_texto <- f_lista(paste0(etiquetar_distrito(top5$distrito_geo[2:5]), " (", top5$n_siniestros[2:5], ")"))
+lurin <- base_maestra_validada %>% st_drop_geometry() %>% filter(distrito_geo_normalizado == "LURIN")
+n_lurin <- nrow(lurin)
+n_lurin_pe1s <- sum(str_detect(coalesce(lurin$cod_carretera, ""), "^PE-1S"))
+```
+
+`r etiquetar_distrito(top5$distrito_geo[1])` registró la mayor cantidad acumulada, con `r top5$n_siniestros[1]` siniestros fatales. Le siguen `r top5_texto`. En conjunto, los cinco distritos concentraron `r sum(top5$n_siniestros)` siniestros, el `r f_pct(100 * sum(top5$n_siniestros) / n_ambito)` de los registros localizados en el ámbito.
+
+El caso de Lurín es ilustrativo: `r n_lurin_pe1s` de sus `r n_lurin` siniestros ocurrieron sobre la Panamericana Sur. Su posición en el ranking responde a un corredor de alcance metropolitano y no a su red vial local.
+
+La distribución es heterogénea, y la concentración no se limita a un único sector de la metrópoli. Sin embargo, una mayor cantidad absoluta no implica un mayor riesgo. Los distritos extensos, más poblados o con más vías metropolitanas pueden acumular más eventos por su mayor exposición.
+
+### 4.5 Tasas distritales: por habitante y por kilómetro de vía
+
+Las frecuencias absolutas reflejan, en buena medida, el tamaño de cada distrito. Para aproximarse a niveles relativos de riesgo, se calculan dos tasas que responden preguntas distintas:
+
+- **Fallecidos por 100 mil habitantes al año:** cuánto afecta la siniestralidad fatal a cada distrito en relación con su población residente.
+- **Fallecidos por 100 km de red vial principal al año:** qué tan peligrosa es la red vial del distrito, con independencia de quién circula por ella.
+
+En ambos casos, el numerador es el número de fallecidos en siniestros localizados en el distrito. Las dos tasas se suavizan con el estimador bayesiano empírico (ver 2.7).
+
+```{r fig-mapa-tasas, fig.width = 11, fig.height = 7}
+km_red_distrito <- st_intersection(
+  red_vial_principal %>% select(),
+  distritos_lima_callao_utm %>% select(ubigeo)
+) %>%
+  mutate(km = as.numeric(st_length(.)) / 1000) %>%
+  st_drop_geometry() %>%
+  group_by(ubigeo) %>%
+  summarise(km_red = sum(km), .groups = "drop")
+
+fallecidos_distrito <- base_maestra_validada %>%
+  st_drop_geometry() %>%
+  filter(!is.na(distrito_geo)) %>%
+  group_by(ubigeo) %>%
+  summarise(fallecidos = sum(cantidad_de_fallecidos), .groups = "drop")
+
+tasas_distritales <- distritos_lima_callao_utm %>%
+  left_join(poblacion_2025, by = "ubigeo") %>%
+  left_join(km_red_distrito, by = "ubigeo") %>%
+  left_join(fallecidos_distrito, by = "ubigeo") %>%
+  mutate(fallecidos = replace_na(fallecidos, 0))
+
+anios_periodo <- 4
+
+eb_poblacion <- EBest(tasas_distritales$fallecidos, tasas_distritales$poblacion * anios_periodo)
+eb_red <- EBest(tasas_distritales$fallecidos, tasas_distritales$km_red * anios_periodo)
+
+tasas_distritales <- tasas_distritales %>%
+  mutate(
+    tasa_pob_bruta = fallecidos / (poblacion * anios_periodo) * 1e5,
+    tasa_pob_eb = eb_poblacion$estmm * 1e5,
+    tasa_km_bruta = fallecidos / (km_red * anios_periodo) * 100,
+    tasa_km_eb = eb_red$estmm * 100
+  )
+
+tasa_metropolitana <- sum(tasas_distritales$fallecidos) /
+  (sum(tasas_distritales$poblacion) * anios_periodo) * 1e5
+
+mapa_tasa <- function(variable, titulo, leyenda) {
+  ggplot(tasas_distritales) +
+    geom_sf(aes(fill = .data[[variable]]), color = "white", linewidth = 0.2) +
+    scale_fill_viridis_c(option = "magma", direction = -1, name = leyenda) +
+    guides(fill = guide_colorbar(title.position = "top", title.hjust = 0.5)) +
+    labs(title = titulo) +
+    theme_void(base_size = 11) +
+    theme(
+      plot.title = element_text(face = "bold", size = 12),
+      legend.position = "bottom",
+      legend.key.width = grid::unit(1.4, "cm")
+    )
+}
+
+(mapa_tasa("tasa_pob_eb", "Por 100 mil habitantes al año", "Tasa suavizada") |
+  mapa_tasa("tasa_km_eb", "Por 100 km de red vial principal al año", "Tasa suavizada")) +
+  plot_annotation(
+    title = "Tasas de mortalidad por siniestros de tránsito, 2021–2024",
+    subtitle = "Lima y Callao, tasas bayesianas empíricas por distrito",
+    caption = "Fuente: ONSV, INEI (Censos Nacionales 2025), IMP y MPC. Elaboración propia.",
+    theme = theme(
+      plot.title = element_text(face = "bold", size = 15),
+      plot.caption = element_text(size = 8, hjust = 0)
+    )
+  )
+
+top_tasas <- function(variable, etiqueta) {
+  tasas_distritales %>%
+    st_drop_geometry() %>%
+    arrange(desc(.data[[variable]])) %>%
+    slice_head(n = 8) %>%
+    transmute(Posición = row_number(), "{etiqueta}" := etiquetar_distrito(distrito_geo),
+              "Tasa {etiqueta}" := round(.data[[variable]], 1))
+}
+
+bind_cols(
+  top_tasas("tasa_pob_eb", "por habitante"),
+  top_tasas("tasa_km_eb", "por km de vía") %>% select(-Posición)
+) %>%
+  knitr::kable(caption = "Ocho distritos con las tasas suavizadas más altas según cada denominador")
+
+correlacion_rangos <- cor(tasas_distritales$tasa_pob_eb, tasas_distritales$tasa_km_eb, method = "spearman")
+```
+
+```{r cifras-tasas, include = FALSE}
+orden_pob <- tasas_distritales %>% st_drop_geometry() %>% arrange(desc(tasa_pob_eb)) %>% mutate(puesto = row_number())
+orden_km <- tasas_distritales %>% st_drop_geometry() %>% arrange(desc(tasa_km_eb))
+top_pob <- etiquetar_distrito(orden_pob$distrito_geo[1:5])
+top_km <- etiquetar_distrito(orden_km$distrito_geo[1:5])
+sjl <- filter(orden_pob, normalizar_nombre(distrito_geo) == "SAN JUAN DE LURIGANCHO")
+puesto_sjl_casos <- which(normalizar_nombre(siniestros_distrito$distrito_geo) == "SAN JUAN DE LURIGANCHO")
+```
+
+La tasa metropolitana fue de `r sprintf('%.1f', tasa_metropolitana)` fallecidos por cada 100 mil habitantes al año. Los dos denominadores producen geografías muy distintas: la correlación de rangos entre ambas tasas es de `r round(correlacion_rangos, 2)`.
+
+Por habitante, las tasas más altas corresponden a `r f_lista(top_pob)`. Son distritos atravesados por la Panamericana y con poblaciones residentes relativamente pequeñas. En ellos, buena parte de las víctimas probablemente no reside en el distrito, sino que circula por la vía. La tasa por habitante mide aquí la carga que soporta el territorio más que el riesgo de sus residentes.
+
+En el extremo opuesto está San Juan de Lurigancho. Ocupa el puesto `r puesto_sjl_casos` en número de siniestros, pero el `r sjl$puesto` de `r nrow(orden_pob)` en la tasa por habitante. Su volumen de casos es reducido frente a una población de `r f_num(sjl$poblacion)` habitantes.
+
+Por kilómetro de vía, el patrón cambia por completo. Encabezan `r f_lista(top_km)`, distritos densos con redes viales cortas e intensamente usadas. Allí el problema no es un corredor de paso, sino la intensidad de uso de la red urbana.
+
+Ninguna de las dos tasas mide la exposición en sentido estricto, porque no incorporan flujos vehiculares ni peatonales. Su valor está en mostrar que la pregunta "¿dónde es más peligroso?" tiene respuestas distintas según quién la formule. Un gobierno local responde por sus residentes; un gestor de la red vial metropolitana, por quienes la usan.
+
+### 4.6 Cambio distrital entre 2021 y 2024
+
+La distribución acumulada no muestra cómo evolucionó cada distrito. Por ello se compara el número de eventos registrado en cada uno en 2021 y en 2024, con la misma asignación cartográfica:
+
+- los valores positivos indican más siniestros en 2024 que en 2021;
+- los valores negativos indican una disminución;
+- el cero indica ausencia de cambio.
+
+```{r fig-mapa-cambio}
+# Número de siniestros por distrito en 2021 y 2024
+
+cambio_distrital <- base_maestra_validada %>%
+  filter(
+    !is.na(distrito_geo),
+    anio %in% c(2021, 2024)
+  ) %>%
+
+  st_drop_geometry() %>%
+
+  count(
+    ubigeo,
+    distrito_geo,
+    anio,
+    name = "n_siniestros"
+  ) %>%
+
+  pivot_wider(
+    names_from = anio,
+    values_from = n_siniestros,
+    values_fill = 0,
+    names_prefix = "anio_"
+  ) %>%
+
+  mutate(
+    cambio_2021_2024 =
+      anio_2024 - anio_2021
+  )
+
+# Unión con los límites distritales
+
+mapa_cambio <- distritos_lima_callao_utm %>%
+  left_join(
+    cambio_distrital %>%
+      select(
+        ubigeo,
+        anio_2021,
+        anio_2024,
+        cambio_2021_2024
+      ),
+
+    by = "ubigeo"
+  ) %>%
+
+  mutate(
+    anio_2021 =
+      replace_na(anio_2021, 0),
+
+    anio_2024 =
+      replace_na(anio_2024, 0),
+
+    cambio_2021_2024 =
+      replace_na(cambio_2021_2024, 0)
+  )
+
+# Límites provinciales
+
+limites_provinciales_lc <-
+  distritos_lima_callao_utm %>%
+
+  group_by(
+    departamento_geo,
+    provincia_geo
+  ) %>%
+
+  summarise(
+    .groups = "drop"
+  )
+
+# Límite simétrico para la escala
+
+limite_cambio <- max(
+  abs(
+    mapa_cambio$cambio_2021_2024
+  ),
+  na.rm = TRUE
+)
+
+# Mapa
+
+grafico_mapa_cambio <- ggplot(
+  mapa_cambio
+) +
+
+  geom_sf(
+    aes(
+      fill = cambio_2021_2024
+    ),
+    color = "#FFFFFF",
+    linewidth = 0.20
+  ) +
+
+  geom_sf(
+    data = limites_provinciales_lc,
+    fill = NA,
+    color = "#303030",
+    linewidth = 0.65
+  ) +
+
+  scale_fill_gradient2(
+    low = "#2166AC",
+    mid = "#D9D9D9",
+    high = "#B2182B",
+
+    midpoint = 0,
+
+    limits = c(
+      -limite_cambio,
+      limite_cambio
+    ),
+
+    oob = scales::squish,
+
+    labels = scales::label_number(
+      big.mark = ",",
+      accuracy = 1
+    ),
+
+    breaks = scales::pretty_breaks(
+      n = 5
+    )
+  ) +
+
+  coord_sf(
+    datum = NA,
+    expand = FALSE
+  ) +
+
+  labs(
+    title = "Cambio distrital de los siniestros de tránsito fatales",
+    subtitle = "Diferencia absoluta entre 2021 y 2024",
+    fill = "Variación\n2024 − 2021",
+
+    caption = paste(
+      "Fuente: ONSV e INEI. Elaboración propia.",
+      "Rojo: aumento; azul: disminución; gris: sin cambio."
+    )
+  ) +
+
+  theme_void(
+    base_size = 11
+  ) +
+
+  theme(
+    plot.title = element_text(
+      size = 15,
+      face = "bold",
+      hjust = 0
+    ),
+
+    plot.subtitle = element_text(
+      size = 11,
+      hjust = 0
+    ),
+
+    plot.caption = element_text(
+      size = 8,
+      hjust = 0,
+      margin = margin(t = 8)
+    ),
+
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 9),
+
+    legend.position = "right",
+
+    legend.box.spacing = grid::unit(
+      0.6,
+      "cm"
+    ),
+
+    plot.title.position = "plot",
+    plot.caption.position = "plot"
+  )
+
+grafico_mapa_cambio
+
+# Distritos con mayores aumentos y disminuciones
+
+cambios_extremos <- bind_rows(
+
+  cambio_distrital %>%
+    filter(
+      cambio_2021_2024 > 0
+    ) %>%
+
+    slice_max(
+      cambio_2021_2024,
+      n = 3,
+      with_ties = TRUE
+    ) %>%
+
+    mutate(
+      tipo_cambio = "Mayor aumento"
+    ),
+
+  cambio_distrital %>%
+    filter(
+      cambio_2021_2024 < 0
+    ) %>%
+
+    slice_min(
+      cambio_2021_2024,
+      n = 3,
+      with_ties = TRUE
+    ) %>%
+
+    mutate(
+      tipo_cambio = "Mayor disminución"
+    )
+) %>%
+
+  mutate(
+    distrito_geo = etiquetar_distrito(distrito_geo)
+  ) %>%
+
+  arrange(
+    desc(cambio_2021_2024)
+  ) %>%
+
+  select(
+    Categoría = tipo_cambio,
+    Distrito = distrito_geo,
+    `Siniestros 2021` = anio_2021,
+    `Siniestros 2024` = anio_2024,
+    `Cambio absoluto` = cambio_2021_2024
+  )
+
+knitr::kable(
+  cambios_extremos,
+
+  align = c(
+    "l",
+    "l",
+    "r",
+    "r",
+    "r"
+  ),
+
+  caption = paste(
+    "Distritos con los mayores aumentos",
+    "y disminuciones entre 2021 y 2024"
+  )
+)
+```
+
+```{r cifras-cambio, include = FALSE}
+aumentos <- cambio_distrital %>% arrange(desc(cambio_2021_2024))
+disminuciones <- cambio_distrital %>% arrange(cambio_2021_2024)
+trayectoria <- function(nombre) {
+  serie <- base_maestra_validada %>%
+    st_drop_geometry() %>%
+    filter(distrito_geo_normalizado == nombre) %>%
+    count(anio) %>%
+    complete(anio = 2021:2024, fill = list(n = 0)) %>%
+    arrange(anio)
+  list(serie = serie$n, p = poisson.test(c(serie$n[4], serie$n[1]))$p.value)
+}
+tr_callao <- trayectoria("CALLAO")
+tr_sanborja <- trayectoria("SAN BORJA")
+sb_2324 <- base_maestra_validada %>%
+  st_drop_geometry() %>%
+  filter(distrito_geo_normalizado == "SAN BORJA", anio %in% 2023:2024)
+n_sb_pe1s <- sum(str_detect(coalesce(sb_2324$cod_carretera, ""), "^PE-1S"))
+```
+
+Los mayores aumentos absolutos se registraron en dos distritos:
+
+- `r etiquetar_distrito(aumentos$distrito_geo[1])`, que pasó de `r aumentos$anio_2021[1]` siniestros en 2021 a `r aumentos$anio_2024[1]` en 2024;
+- `r etiquetar_distrito(aumentos$distrito_geo[2])`, que pasó de `r aumentos$anio_2021[2]` a `r aumentos$anio_2024[2]`.
+
+Las mayores disminuciones correspondieron a tres distritos:
+
+- `r etiquetar_distrito(disminuciones$distrito_geo[1])`, de `r disminuciones$anio_2021[1]` a `r disminuciones$anio_2024[1]`;
+- `r etiquetar_distrito(disminuciones$distrito_geo[2])`, de `r disminuciones$anio_2021[2]` a `r disminuciones$anio_2024[2]`;
+- `r etiquetar_distrito(disminuciones$distrito_geo[3])`, de `r disminuciones$anio_2021[3]` a `r disminuciones$anio_2024[3]`.
+
+Los casos de Callao y San Borja no son saltos aislados entre los años extremos, sino trayectorias graduales:
+
+- Callao registró `r f_lista(tr_callao$serie)` siniestros entre 2021 y 2024 (`r f_p(tr_callao$p)`).
+- San Borja registró `r f_lista(tr_sanborja$serie)` (`r f_p(tr_sanborja$p)`).
+
+Ambos valores p corresponden a la prueba exacta de Poisson entre 2024 y 2021. En San Borja, `r n_sb_pe1s` de los `r nrow(sb_2324)` siniestros de 2023 y 2024 ocurrieron sobre la Panamericana Sur (Vía Expresa Sur). Aunque ambas variaciones son estadísticamente significativas, su magnitud justifica contrastarlas con la fuente antes de atribuirlas a cambios reales en las condiciones de seguridad vial.
+
+La evolución territorial no fue homogénea. La variación metropolitana coexistió con distritos donde los registros aumentaron, disminuyeron o se mantuvieron. El indicador compara solo los años extremos y es sensible a valores iniciales reducidos, como en San Borja. Permite reconocer cambios entre dos momentos, pero no demostrar tendencias distritales sostenidas.
+
+### 4.7 Tramos críticos de la red vial
+
+Este apartado identifica los tramos de vía donde se concentran los siniestros. La red vial principal se divide en tramos de unos 500 metros. Esta longitud busca un equilibrio entre dos riesgos. Con tramos más cortos, la mayoría no registraría ningún siniestro y uno o dos casos bastarían para que un tramo apareciera como crítico. Con tramos más largos, las concentraciones se diluirían y se mezclarían en una misma unidad condiciones distintas, como varias intersecciones con características diferentes. Unos 500 metros equivalen, en la trama urbana de Lima, a pocas cuadras: una escala en la que puede diseñarse una intervención concreta, como un cruce peatonal, iluminación o control de velocidad. Además, coincide con la escala principal de los hexágonos (ver 4.8), lo que permite comparar ambos análisis. Cada vía se divide en partes iguales lo más cercanas posible a 500 metros, por lo que la longitud real de los tramos varía ligeramente. Para cada tramo se compara el número observado de siniestros con el esperado según su longitud y su clase de vía (ver 2.7).
+
+```{r, cache = TRUE}
+red_agrupada <- red_vial_principal %>%
+  mutate(nombre_grupo = coalesce(nombre, paste0("SIN NOMBRE ", row_number()))) %>%
+  group_by(nombre_grupo, fuente) %>%
+  summarise(clase_via = first(clase_via), .groups = "drop") %>%
+  st_cast("MULTILINESTRING") %>%
+  st_line_merge() %>%
+  st_cast("MULTILINESTRING") %>%
+  st_cast("LINESTRING")
+
+cortar_linea <- function(geometria, largo = 500) {
+  longitud <- as.numeric(st_length(geometria))
+  n_tramos <- max(1, round(longitud / largo))
+  cortes <- seq(0, 1, length.out = n_tramos + 1)
+  st_sfc(
+    lapply(seq_len(n_tramos), function(k) {
+      lwgeom::st_linesubstring(geometria, cortes[k], cortes[k + 1])[[1]]
+    }),
+    crs = st_crs(geometria)
+  )
+}
+
+tramos <- map(seq_len(nrow(red_agrupada)), function(k) {
+  st_sf(
+    nombre = red_agrupada$nombre_grupo[k],
+    clase_via = red_agrupada$clase_via[k],
+    fuente = red_agrupada$fuente[k],
+    geometry = cortar_linea(st_geometry(red_agrupada)[k])
+  )
+}) %>%
+  bind_rows() %>%
+  mutate(id_tramo = row_number(), longitud_m = as.numeric(st_length(.)))
+```
+
+```{r}
+# Asignación de siniestros al tramo más cercano (radio de 50 m)
+idx_tramo <- st_nearest_feature(base_maestra_validada, tramos)
+dist_tramo <- as.numeric(st_distance(base_maestra_validada, tramos[idx_tramo, ], by_element = TRUE))
+
+conteo_tramos <- base_maestra_validada %>%
+  st_drop_geometry() %>%
+  mutate(id_tramo = if_else(dist_tramo < 50, tramos$id_tramo[idx_tramo], NA_integer_)) %>%
+  filter(!is.na(id_tramo)) %>%
+  group_by(id_tramo) %>%
+  summarise(
+    siniestros = n(),
+    fallecidos = sum(cantidad_de_fallecidos),
+    peatones = sum(n_peatones_fallecidos),
+    .groups = "drop"
+  )
+
+tramos <- tramos %>%
+  left_join(conteo_tramos, by = "id_tramo") %>%
+  mutate(across(c(siniestros, fallecidos, peatones), ~ replace_na(.x, 0L))) %>%
+  group_by(clase_via) %>%
+  mutate(esperado_clase = sum(siniestros) / sum(longitud_m) * longitud_m) %>%
+  ungroup() %>%
+  mutate(
+    esperado_uniforme = sum(siniestros) / sum(longitud_m) * longitud_m,
+    p_clase = ppois(siniestros - 1, esperado_clase, lower.tail = FALSE),
+    p_uniforme = ppois(siniestros - 1, esperado_uniforme, lower.tail = FALSE),
+    critico_clase = p.adjust(p_clase, "fdr") < 0.05,
+    critico_uniforme = p.adjust(p_uniforme, "fdr") < 0.05
+  )
+
+# Distrito de cada tramo (según su punto medio)
+tramos$distrito <- distritos_lima_callao_utm$distrito_geo[
+  st_nearest_feature(st_point_on_surface(tramos), distritos_lima_callao_utm)
+]
+
+n_tramos <- nrow(tramos)
+n_criticos <- sum(tramos$critico_clase)
+n_criticos_unif <- sum(tramos$critico_uniforme)
+km_criticos <- sum(tramos$longitud_m[tramos$critico_clase]) / 1000
+sin_criticos <- sum(tramos$siniestros[tramos$critico_clase])
+pct_sin_criticos <- 100 * sin_criticos / nrow(base_maestra_validada)
+n_criticos_pe1 <- sum(tramos$critico_clase & str_detect(tramos$nombre, "^PANAMERICANA (NORTE|SUR)$"))
+
+resumen_clases <- tramos %>%
+  st_drop_geometry() %>%
+  group_by(`Clase de vía` = clase_via) %>%
+  summarise(
+    `Longitud (km)` = round(sum(longitud_m) / 1000),
+    Siniestros = sum(siniestros),
+    `Siniestros por km` = round(Siniestros / `Longitud (km)`, 2),
+    .groups = "drop"
+  )
+
+knitr::kable(resumen_clases, caption = "Siniestros sobre la red vial principal según clase de vía")
+```
+
+```{r cifras-tramos, include = FALSE}
+spk <- setNames(resumen_clases[["Siniestros por km"]], resumen_clases[["Clase de vía"]])
+razon_clase <- unname(spk["Expresa o nacional"] / spk["Colectora o avenida"])
+n_criticos_en_uniforme <- sum(tramos$critico_clase & tramos$critico_uniforme)
+n_tramos_peatonales <- sum(tramos$critico_clase & tramos$peatones > tramos$fallecidos / 2)
+```
+
+La red se dividió en `r f_num(n_tramos)` tramos, con un promedio de `r f_num(sum(tramos$siniestros) / n_tramos, 2)` siniestros por tramo en los cuatro años. Las vías expresas y nacionales registran `r f_num(razon_clase, 1)` veces más siniestros por kilómetro que las colectoras y avenidas. Por eso cada tramo se compara con vías de su misma clase, para que la jerarquía vial no determine por sí sola el resultado.
+
+Con este criterio, **`r n_criticos` tramos** presentan un exceso significativo de siniestros. Suman apenas `r f_num(km_criticos, 1)` km, pero concentran `r sin_criticos` siniestros, el `r f_pct(pct_sin_criticos)` del total metropolitano. **`r n_criticos_pe1` de ellos se ubican en la Panamericana.** Con un valor esperado uniforme para toda la red, los tramos críticos ascienden a `r n_criticos_unif`. `r if (n_criticos_en_uniforme == n_criticos) "Todos los tramos identificados con el criterio por clase forman parte de ese conjunto, lo que confirma la estabilidad del resultado." else paste0("De los ", n_criticos, " tramos identificados con el criterio por clase, ", n_criticos_en_uniforme, " forman parte de ese conjunto.")`
+
+```{r fig-mapa-tramos-criticos, fig.width = 9, fig.height = 10}
+tramos_criticos <- tramos %>% filter(critico_clase)
+
+ggplot() +
+  geom_sf(data = distritos_lima_callao_utm, fill = "#F3F4F6", color = "white", linewidth = 0.3) +
+  geom_sf(data = red_vial_principal, color = "#C7CCD3", linewidth = 0.25) +
+  geom_sf(data = tramos_criticos, aes(color = siniestros), linewidth = 2.2) +
+  scale_color_viridis_c(option = "inferno", direction = -1, begin = 0.15, end = 0.85,
+                        name = "Siniestros\nen el tramo") +
+  labs(
+    title = "Tramos críticos de la red vial principal",
+    subtitle = "Tramos de ~500 m con exceso significativo de siniestros fatales (FDR < 0.05), 2021–2024",
+    caption = "Fuente: ONSV, IMP y MPC. Elaboración propia."
+  ) +
+  theme_void(base_size = 11) +
+  theme(
+    plot.title = element_text(face = "bold", size = 15),
+    plot.caption = element_text(size = 8, hjust = 0),
+    legend.position = "right"
+  )
+
+tramos_criticos %>%
+  st_drop_geometry() %>%
+  arrange(desc(siniestros), desc(fallecidos)) %>%
+  transmute(
+    Vía = str_to_title(nombre) %>%
+      str_replace("^Central$", "Carretera Central") %>%
+      str_replace("Tupac", "Túpac") %>%
+      str_replace("Nestor", "Néstor"),
+    Distrito = etiquetar_distrito(distrito),
+    `Longitud (m)` = round(longitud_m),
+    Siniestros = siniestros,
+    Fallecidos = fallecidos,
+    `Peatones fallecidos` = peatones,
+    `Esperados` = round(esperado_clase, 2)
+  ) %>%
+  knitr::kable(caption = "Tramos críticos de la red vial principal, 2021–2024")
+```
+
+El resultado traduce el hallazgo temporal en una lista concreta. Unos pocos kilómetros de la Panamericana, junto con tramos puntuales de la Carretera Central, la Av. Túpac Amaru, la Av. Brasil y la Av. Néstor Gambetta, concentran una parte desproporcionada de las muertes. En `r n_tramos_peatonales` de los `r n_criticos` tramos, más de la mitad de los fallecidos fueron peatones.
+
+### 4.8 Concentraciones espaciales y sensibilidad a la escala
+
+Los tramos viales no capturan los siniestros ocurridos fuera de la red principal ni la proximidad entre tramos de distintas vías. Por ello, el análisis se complementa con mallas hexagonales y el estadístico Gi\* (ver 2.7), que identifica agrupaciones de celdas con valores significativamente altos. Para evaluar la influencia de la escala, el análisis se repite con hexágonos de 250, 500 y 1000 metros.
+
+```{r cache=TRUE}
+ambito_estudio <- st_union(distritos_lima_callao_utm)
+
+zona_analisis <- st_intersection(
+  st_union(st_buffer(st_simplify(red_vial_principal, dTolerance = 20), 1000)),
+  ambito_estudio
+)
+
+siniestros_ambito <- base_maestra_validada %>% filter(!is.na(distrito_geo))
+
+calcular_gi <- function(tamano, nsim = 9999) {
+  set.seed(2026)
+  malla <- st_make_grid(ambito_estudio, cellsize = tamano, square = FALSE)
+  malla <- malla[lengths(st_intersects(malla, zona_analisis)) > 0]
+  hex <- st_sf(id = seq_along(malla), geometry = malla)
+  hex$n <- lengths(st_intersects(hex, siniestros_ambito))
+  pesos <- nb2listw(include.self(poly2nb(hex, queen = TRUE)), style = "B", zero.policy = TRUE)
+  gi <- localG_perm(hex$n, pesos, nsim = nsim, zero.policy = TRUE)
+  p_perm <- attr(gi, "internals")[, "Pr(folded) Sim"]
+  hex %>%
+    mutate(
+      gi = as.numeric(gi),
+      p = p_perm,
+      caliente = gi > 0 & p.adjust(p, "fdr") < 0.05,
+      escala = tamano
+    )
+}
+
+hex_escalas <- map(c(250, 500, 1000), calcular_gi)
+names(hex_escalas) <- c("m250", "m500", "m1000")
+```
+
+```{r}
+hex500 <- hex_escalas$m500 %>%
+  mutate(
+    caliente_250 = lengths(st_intersects(., filter(hex_escalas$m250, caliente))) > 0,
+    caliente_1000 = lengths(st_intersects(st_centroid(st_geometry(.)), filter(hex_escalas$m1000, caliente))) > 0,
+    categoria = case_when(
+      caliente & caliente_250 & caliente_1000 ~ "Robusta (tres escalas)",
+      caliente ~ "Solo en algunas escalas",
+      TRUE ~ "No significativa"
+    )
+  )
+
+tabla_escalas <- map_dfr(hex_escalas, ~ tibble(
+  `Tamaño del hexágono (m)` = unique(.x$escala),
+  Celdas = nrow(.x),
+  `Celdas con siniestros` = sum(.x$n > 0),
+  `Celdas calientes` = sum(.x$caliente),
+  `Siniestros en celdas calientes` = sum(.x$n[.x$caliente])
+))
+
+knitr::kable(tabla_escalas, format.args = list(big.mark = ","),
+             caption = "Resultados del estadístico Gi* según el tamaño del hexágono")
+
+n_robustas <- sum(hex500$categoria == "Robusta (tres escalas)")
+en_robustas <- lengths(st_intersects(siniestros_ambito, filter(hex500, categoria == "Robusta (tres escalas)"))) > 0
+pct_robustas <- 100 * mean(en_robustas)
+pct_robustas_pe1 <- 100 * mean(str_detect(coalesce(siniestros_ambito$cod_carretera[en_robustas], ""), "^PE-1"))
+area_robusta <- n_robustas * as.numeric(st_area(hex500[1, ])) / 1e6
+```
+
+```{r fig-mapa-concentraciones, fig.width = 9, fig.height = 10}
+ggplot() +
+  geom_sf(data = distritos_lima_callao_utm, fill = "#F3F4F6", color = "white", linewidth = 0.3) +
+  geom_sf(data = filter(hex500, categoria != "No significativa"),
+          aes(fill = categoria), color = NA, alpha = 0.9) +
+  geom_sf(data = filter(red_vial_principal, clase_via == "Expresa o nacional"),
+          color = "#4B5563", linewidth = 0.25) +
+  scale_fill_manual(
+    values = c("Robusta (tres escalas)" = "#B91C1C", "Solo en algunas escalas" = "#FCA5A5"),
+    name = NULL
+  ) +
+  labs(
+    title = "Concentraciones significativas de siniestros fatales",
+    subtitle = "Hexágonos de 500 m con Gi* significativo (FDR < 0.05) y su persistencia entre escalas",
+    caption = "Fuente: ONSV, IMP y MPC. Elaboración propia. Líneas: vías expresas y nacionales."
+  ) +
+  theme_void(base_size = 11) +
+  theme(
+    plot.title = element_text(face = "bold", size = 15),
+    plot.caption = element_text(size = 8, hjust = 0),
+    legend.position = "bottom"
+  )
+```
+
+El tamaño del hexágono modifica sustancialmente el resultado. Con celdas de 250 metros aparecen muchas más celdas calientes, pero cada una contiene muy pocos casos; con celdas de 1000 metros las concentraciones son más estables, pero abarcan áreas extensas. Esta variación muestra que una sola escala puede conducir a conclusiones distintas.
+
+Las **`r n_robustas` celdas robustas**, significativas en las tres escalas, abarcan unos `r round(area_robusta)` km² y contienen el `r round(pct_robustas, 1)`% de los siniestros. El `r round(pct_robustas_pe1)`% de los siniestros ubicados en ellas ocurrió en la Panamericana. La mayor zona continua se extiende por el cono norte, a lo largo de la Panamericana Norte y la Vía de Evitamiento, entre el Rímac, El Agustino, Comas y Puente Piedra. Le siguen zonas en el eje sur (Santiago de Surco, San Juan de Miraflores, Chorrillos y Villa El Salvador) y en el centro de Lima. Las celdas significativas solo en algunas escalas deben leerse con cautela, como concentraciones dependientes de la forma de medir.
+
+### 4.9 Mapa interactivo de exploración
+
+Los apartados anteriores agregan los siniestros en distritos, tramos y celdas. Esa agregación es necesaria para identificar patrones, pero oculta los eventos individuales que los componen. El mapa interactivo cumple la función inversa: devuelve cada siniestro a su localización, de modo que pueda examinarse qué hay detrás de una cifra agregada.
+
+Cada siniestro localizado en el ámbito cartográfico se representa con un punto coloreado según su clase: atropello, choque, despiste o volcadura, entre otras. Los puntos se organizan en cuatro capas, una por período del día, que pueden activarse por separado junto con la red vial principal y los límites distritales. Al seleccionar un punto se muestran su código, fecha, hora, clase, distrito y período del día, y el número de fallecidos y lesionados.
+
+```{r}
+# Orden de los periodos del día
+periodos_leaflet <- c("Madrugada", "Mañana", "Tarde", "Noche")
+
+# ----------------------------------------------------------
+# Puntos
+# ----------------------------------------------------------
+siniestros_leaflet <- base_maestra_validada %>%
+  filter(
+    !is.na(distrito_geo),
+    !is.na(clase_siniestro),
+    !is.na(periodo_dia)
+  ) %>%
+  st_transform(4326) %>%
+  mutate(periodo_dia = factor(periodo_dia, levels = periodos_leaflet))
+
+# ----------------------------------------------------------
+# Capas base vectoriales
+# ----------------------------------------------------------
+
+# Distritos de Lima y Callao
+distritos_leaflet <- distritos_lima_callao_utm %>%
+  st_simplify(dTolerance = 10, preserveTopology = TRUE) %>%
+  st_transform(4326) %>%
+  mutate(nombre = etiquetar_distrito(distrito_geo))
+
+# Límites provinciales de Lima y Callao
+provincias_leaflet <- limites_provinciales_lc %>%
+  st_simplify(dTolerance = 10, preserveTopology = TRUE) %>%
+  st_transform(4326)
+
+# Provincias vecinas (contexto): todas las que están a menos de 200 km del ámbito
+ambito_lc <- st_union(distritos_lima_callao_utm)
+
+provincias_contexto <- distritos_raw %>%
+  st_transform(32718) %>%
+  st_make_valid() %>%
+  st_filter(st_buffer(ambito_lc, 200000)) %>%
+  mutate(
+    ubigeo = str_pad(as.character(ubigeo), width = 6, side = "left", pad = "0"),
+    codigo_provincia = str_sub(ubigeo, 1, 4)
+  ) %>%
+  filter(!codigo_provincia %in% c("1501", "0701")) %>%
+  group_by(codigo_provincia, nombdep, nombprov) %>%
+  summarise(.groups = "drop") %>%
+  st_simplify(dTolerance = 50, preserveTopology = TRUE) %>%
+  st_transform(4326) %>%
+  mutate(
+    etiqueta = paste0(
+      "Provincia de ", str_to_title(nombprov),
+      " (", str_to_title(nombdep), ")"
+    )
+  )
+
+# Red vial principal: estilo por clase (etiqueta de leyenda abreviada)
+estilo_vias <- tibble(
+  clase_via    = c("Expresa o nacional", "Arterial", "Colectora o avenida"),
+  leyenda_via  = c("Expresa o nacional", "Arterial", "Colectora"),
+  color_via    = c("#3F4A5A", "#6E7889", "#A3ABB7"),
+  grosor_via   = c(2.6, 1.5, 0.8)
+)
+
+vias_leaflet <- red_vial_principal %>%
+  st_simplify(dTolerance = 5) %>%
+  st_transform(4326) %>%
+  left_join(estilo_vias, by = "clase_via") %>%
+  mutate(
+    nombre_via = coalesce(str_to_title(nombre), "Vía sin nombre"),
+    etiqueta_via = paste0(nombre_via, " (", leyenda_via, ")")
+  )
+
+# Colores de límites (gama ocre/marrón, distinta de las vías)
+color_limite_provincial <- "#8C5A3C"
+color_limite_distrital  <- "#C9A27E"
+color_tierra_contexto   <- "#ECE8E0"
+color_tierra_ambito     <- "#FAFAF8"
+color_oceano            <- "#CFE0EE"
+
+# ----------------------------------------------------------
+# Paleta por clase de siniestro
+# ----------------------------------------------------------
+paleta_clases <- c(
+  "ATROPELLO" = "#E41A1C",
+  "CHOQUE" = "#377EB8",
+  "ATROPELLO FUGA" = "#FF7F00",
+  "DESPISTE" = "#4DAF4A",
+  "VOLCADURA" = "#984EA3",
+  "CAÍDA DE PASAJERO" = "#A65628",
+  "CHOQUE CON OBJETO FIJO" = "#F781BF",
+  "CHOQUE FUGA" = "#00A6A6",
+  "ESPECIAL" = "#FFD92F",
+  "FERROVIARIO" = "#666666"
+)
+
+clases_no_definidas <- setdiff(
+  unique(as.character(siniestros_leaflet$clase_siniestro)),
+  names(paleta_clases)
+)
+if (length(clases_no_definidas) > 0) {
+  warning(paste(
+    "Las siguientes clases no tienen un color asignado:",
+    paste(clases_no_definidas, collapse = ", ")
+  ))
+}
+
+pal_clase <- colorFactor(
+  palette = unname(paleta_clases),
+  domain = names(paleta_clases)
+)
+
+# Extensión inicial (Lima y Callao) y límites de desplazamiento
+bbox_leaflet <- st_bbox(distritos_leaflet)
+
+# ----------------------------------------------------------
+# Mapa: panes para fijar el orden de dibujo
+# (contexto < distritos < vías < puntos)
+# ----------------------------------------------------------
+mapa_leaflet <- leaflet(
+  width = "100%",
+  height = 700,
+  options = leafletOptions(
+    minZoom = 8,
+    maxZoom = 17,
+    zoomSnap = 0.25,
+    zoomDelta = 0.5
+  )
+) %>%
+  addMapPane("p_contexto", zIndex = 400) %>%
+  addMapPane("p_distritos", zIndex = 410) %>%
+  addMapPane("p_vias", zIndex = 420) %>%
+  addMapPane("p_puntos", zIndex = 430) %>%
+  
+  # Provincias vecinas
+  addPolygons(
+    data = provincias_contexto,
+    fillColor = color_tierra_contexto,
+    fillOpacity = 1,
+    color = color_limite_distrital,
+    weight = 1.2,
+    label = ~etiqueta,
+    options = pathOptions(pane = "p_contexto")
+  ) %>%
+  
+  # Distritos de Lima y Callao
+  addPolygons(
+    data = distritos_leaflet,
+    group = "Límites distritales",
+    fillColor = color_tierra_ambito,
+    fillOpacity = 1,
+    color = color_limite_distrital,
+    weight = 0.9,
+    dashArray = "3,3",
+    label = ~nombre,
+    highlightOptions = highlightOptions(
+      color = color_limite_provincial,
+      weight = 2.5,
+      dashArray = "",
+      bringToFront = FALSE
+    ),
+    options = pathOptions(pane = "p_distritos")
+  ) %>%
+  
+  # Límites provinciales de Lima y Callao
+  addPolygons(
+    data = provincias_leaflet,
+    group = "Límites distritales",
+    fill = FALSE,
+    color = color_limite_provincial,
+    weight = 2.2,
+    options = pathOptions(pane = "p_distritos", interactive = FALSE)
+  ) %>%
+  
+  # Red vial principal
+  addPolylines(
+    data = vias_leaflet,
+    group = "Red vial principal",
+    color = ~color_via,
+    weight = ~grosor_via,
+    opacity = 0.9,
+    label = ~etiqueta_via,
+    options = pathOptions(pane = "p_vias")
+  ) %>%
+  
+  # Rótulo del océano
+  addLabelOnlyMarkers(
+    lng = -77.40,
+    lat = -12.35,
+    label = "Océano Pacífico",
+    labelOptions = labelOptions(
+      noHide = TRUE,
+      textOnly = TRUE,
+      direction = "center",
+      style = list(
+        "color" = "#5B7A99",
+        "font-style" = "italic",
+        "font-size" = "15px",
+        "letter-spacing" = "2px"
+      )
+    )
+  )
+
+# Puntos por periodo del día
+for (periodo_actual in periodos_leaflet) {
+  
+  datos_periodo <- siniestros_leaflet %>%
+    filter(periodo_dia == periodo_actual)
+  
+  mapa_leaflet <- mapa_leaflet %>%
+    addCircleMarkers(
+      data = datos_periodo,
+      group = periodo_actual,
+      radius = 3,
+      color = ~pal_clase(clase_siniestro),
+      fillColor = ~pal_clase(clase_siniestro),
+      fillOpacity = 0.75,
+      opacity = 0.9,
+      stroke = TRUE,
+      weight = 0.5,
+      options = pathOptions(pane = "p_puntos"),
+      popup = ~paste0(
+        "<b>Código de siniestro:</b> ", codigo_siniestro, "<br>",
+        "<b>Fecha:</b> ", format(fecha_siniestro, "%d/%m/%Y"), "<br>",
+        "<b>Hora:</b> ", substr(as.character(hora_siniestro), 1, 5), "<br>",
+        "<b>Clase:</b> ", clase_siniestro, "<br>",
+        "<b>Distrito:</b> ", etiquetar_distrito(distrito_geo), "<br>",
+        "<b>Periodo del día:</b> ", periodo_dia, "<br>",
+        "<b>Fallecidos:</b> ", cantidad_de_fallecidos, "<br>",
+        "<b>Lesionados:</b> ", cantidad_de_lesionados
+      )
+    )
+}
+
+# Controles, leyendas, escala y encuadre
+mapa_leaflet <- mapa_leaflet %>%
+  addLayersControl(
+    overlayGroups = c(
+      periodos_leaflet,
+      "Red vial principal",
+      "Límites distritales"
+    ),
+    options = layersControlOptions(collapsed = FALSE)
+  ) %>%
+  addLegend(
+    position = "bottomright",
+    colors = unname(paleta_clases),
+    labels = str_to_sentence(names(paleta_clases)),
+    title = "Clase de siniestro",
+    opacity = 1
+  ) %>%
+  addLegend(
+    position = "bottomleft",
+    colors = estilo_vias$color_via,
+    labels = estilo_vias$leyenda_via,
+    title = "Red vial principal",
+    opacity = 1
+  ) %>%
+  addLegend(
+    position = "bottomleft",
+    colors = c(color_limite_provincial, color_limite_distrital),
+    labels = c("Límite provincial", "Límite distrital"),
+    title = "Límites",
+    opacity = 1
+  ) %>%
+  addScaleBar(
+    position = "bottomleft",
+    options = scaleBarOptions(metric = TRUE, imperial = FALSE)
+  ) %>%
+  fitBounds(
+    lng1 = as.numeric(bbox_leaflet["xmin"]),
+    lat1 = as.numeric(bbox_leaflet["ymin"]),
+    lng2 = as.numeric(bbox_leaflet["xmax"]),
+    lat2 = as.numeric(bbox_leaflet["ymax"]),
+    options = list(padding = c(8, 8))
+  ) %>%
+  setMaxBounds(
+    lng1 = as.numeric(bbox_leaflet["xmin"]) - 1,
+    lat1 = as.numeric(bbox_leaflet["ymin"]) - 0.6,
+    lng2 = as.numeric(bbox_leaflet["xmax"]) + 1,
+    lat2 = as.numeric(bbox_leaflet["ymax"]) + 0.6
+  ) %>%
+  # Fondo: océano Pacífico
+  htmlwidgets::onRender(
+    sprintf("function(el, x) { el.style.background = '%s'; }", color_oceano)
+  )
+
+htmltools::div(
+  style = "width: 90%; max-width: 1050px; margin-left: auto; margin-right: auto;",
+  mapa_leaflet
+)
+```
+
+```{r cifras-mapa, include = FALSE}
+pct_atropellos <- 100 * mean(str_detect(siniestros_leaflet$clase_siniestro, "^ATROPELLO"))
+pct_choques <- 100 * mean(str_detect(siniestros_leaflet$clase_siniestro, "^CHOQUE"))
+```
+
+El mapa tiene tres usos principales:
+
+- **Verificar los resultados agregados.** Al acercarse a un tramo crítico (ver 4.7) o a una concentración robusta (ver 4.8), pueden identificarse los siniestros concretos que los sustentan, con su fecha, hora y clase. El código de siniestro permite, además, rastrear cada registro en las bases originales del ONSV.
+
+- **Explorar el tipo de siniestro.** Los atropellos, con o sin fuga del conductor, representan el `r f_pct(pct_atropellos)` de los siniestros del mapa, y los choques, incluidos los choques contra objetos fijos y con fuga, el `r f_pct(pct_choques)`. La distribución de colores muestra dónde predomina cada clase. Así puede observarse, por ejemplo, si los siniestros de un corredor son sobre todo atropellos, lo que apuntaría a problemas de cruce peatonal, o choques entre vehículos.
+
+- **Comparar los períodos del día.** Activar solo la capa de madrugada permite ver en el territorio el patrón descrito en el apartado 4.3: la concentración nocturna de siniestros a lo largo de la Panamericana.
+
+Es una herramienta de consulta, no de análisis. No mide densidad ni establece jerarquías entre distritos o clases de siniestro, y a escalas generales los puntos se superponen en las zonas de mayor concentración. Lo que se observe en el mapa debe contrastarse con los análisis estadísticos de los apartados anteriores.
+
+```{r guardar-objetos-carrusel, include = FALSE}
+# Objetos para el carrusel de difusión (carrusel.R)
+saveRDS(
+  list(
+    siniestros = base_maestra_validada,
+    distritos = distritos_lima_callao_utm,
+    red = red_vial_principal,
+    tramos = tramos,
+    hex500 = hex500,
+    tabla_escalas = tabla_escalas,
+    tasas = tasas_distritales,
+    ramales = ramales_pe1
+  ),
+  "results/objetos_carrusel.rds"
+)
+```
+
+## 5. Discusión
+
+```{r cifras-discusion, include = FALSE}
+pct_peatones <- 100 * resumen_indicadores$peatones_fallecidos / resumen_indicadores$total_fallecidos
+pct_sin_dosaje <- 100 * mean(is.na(base_maestra_validada$hay_dosaje_positivo))
+cobertura_prov <- base_maestra_validada %>%
+  st_drop_geometry() %>%
+  filter(!is.na(ubigeo)) %>%
+  mutate(provincia = if_else(str_sub(ubigeo, 1, 2) == "07", "Callao", "Lima")) %>%
+  group_by(provincia) %>%
+  summarise(pct = 100 * mean(distancia_red_m < 50), .groups = "drop")
+cob_lima <- cobertura_prov$pct[cobertura_prov$provincia == "Lima"]
+cob_callao <- cobertura_prov$pct[cobertura_prov$provincia == "Callao"]
+```
+
+### 5.1 La Panamericana como eje de la siniestralidad fatal metropolitana
+
+El principal hallazgo de este trabajo es que la evolución de la siniestralidad fatal en Lima y Callao entre 2021 y 2024 no fue un fenómeno difuso, sino localizado. Los siniestros en el resto de la red vial se mantuvieron prácticamente constantes, mientras que los de la Panamericana crecieron `r f_pct(pruebas_pe1$variacion[1], 0)`. Dentro de ella, el aumento se concentró en la Panamericana Sur, que duplicó con creces sus registros (ver 4.2.2).
+
+El resultado se sostiene con dos criterios independientes de identificación de la vía: el código de carretera del ONSV y la localización sobre la red (ver 4.2.2). También se sostiene con dos aproximaciones territoriales distintas: los tramos viales y las concentraciones hexagonales (ver 4.7 y 4.8).
+
+La lectura temporal exige una precaución. El año 2021 no fue de movilidad normal, debido a las restricciones vigentes (ver 4.2.1). Eso explica la baja participación de la madrugada en los días laborables de ese año (ver 4.3) y obliga a interpretar parte del crecimiento posterior como recuperación de la movilidad.
+
+Precisamente por eso el contraste entre vías es relevante. Si el aumento respondiera solo a la recuperación general del tránsito, también debería observarse en el resto de la red, y eso no ocurre. Solo cabría otra lectura si la recuperación hubiera sido desigual entre vías, posibilidad que tampoco puede descartarse sin datos de flujo.
+
+Entre las hipótesis plausibles para explicar la concentración en la Panamericana Sur están:
+
+- el crecimiento del tránsito en el eje;
+- la expansión urbana de los distritos que atraviesa;
+- la convivencia, en una misma vía, de flujos de alta velocidad con desplazamientos peatonales locales.
+
+Ninguna puede evaluarse con la información disponible, porque no se cuenta con datos de flujos vehiculares ni de infraestructura.
+
+### 5.2 Peatones, madrugada y vías de alta velocidad
+
+El `r f_pct(pct_peatones)` de las personas fallecidas fueron peatones (ver 4.1). Esa proporción duplica con creces el promedio mundial, donde los peatones representan el 23% de las muertes por siniestros de tránsito (OPS, 2023). Aunque ambas cifras no son estrictamente comparables, la diferencia sugiere que la siniestralidad fatal de Lima y Callao es, ante todo, un problema de convivencia entre peatones y vehículos en el espacio urbano. La proporción de peatones entre los fallecidos es, además, similar en la Panamericana (`r f_pct(perfil_pe1[["Peatones entre fallecidos (%)"]][1])`) y en el resto de la red (`r f_pct(perfil_pe1[["Peatones entre fallecidos (%)"]][2])`), de modo que el riesgo peatonal no es exclusivo del corredor (ver 4.3).
+
+La misma fuente señala que el 80% de las vías del mundo no cumple los estándares de seguridad peatonal (OPS, 2023). Evaluar ese indicador en la red metropolitana es una línea de investigación pertinente.
+
+En la Panamericana, el perfil de los siniestros tiene rasgos propios. El `r f_pct(perfil_pe1[["De madrugada (%)"]][1], 0)` de sus siniestros ocurrió de madrugada y en el `r f_pct(perfil_pe1[["Con vehículo fugado (%)"]][1], 0)` el vehículo se dio a la fuga. Son proporciones `r f_num(razon_madrugada, 1)` y `r f_num(razon_fuga, 1)` veces mayores, respectivamente, que en el resto de la red (ver 4.3).
+
+Las altas velocidades, la menor iluminación y vigilancia nocturnas, y los peatones que cruzan una vía expresa podrían configurar un escenario de riesgo particular. Los datos describen el patrón, pero no permiten explicarlo causalmente. Además, el `r f_pct(pct_sin_dosaje, 0)` de los siniestros del período no tiene ningún resultado de dosaje etílico registrado (ver 3.6), lo que impide evaluar el papel del alcohol.
+
+### 5.3 ¿Dónde es más peligroso? Denominadores, escalas e inferencia
+
+La respuesta a la pregunta territorial depende de cómo se mida:
+
+- las frecuencias absolutas señalan sobre todo a distritos extensos y muy poblados, junto con alguno atravesado por la Panamericana, como Lurín (ver 4.4);
+
+- la tasa por habitante, a los distritos atravesados por la Panamericana con poblaciones pequeñas (ver 4.5);
+
+- la tasa por kilómetro de vía, a los distritos urbanos densos (ver 4.5).
+
+La correlación de rangos entre ambas tasas (`r round(correlacion_rangos, 2)`) confirma que cada una captura una dimensión diferente del problema. Para la gestión pública, esta diferencia no es un detalle técnico. Un gobierno local responde por la población que reside en su territorio. La gestión de un corredor metropolitano, en cambio, responde por quienes lo utilizan, residan o no en los distritos que atraviesa.
+
+La escala de análisis también importa. Con hexágonos de 250 metros se identifican muchas más celdas calientes que con hexágonos de 1000 metros, y no todas coinciden (ver 4.8). Siguiendo la recomendación de reportar la sensibilidad de los resultados a la unidad espacial (Xu et al., 2018, p. 73), este trabajo distingue dos tipos de concentración:
+
+- **robustas**, presentes en las tres escalas;
+- **dependientes de la escala**, presentes solo en algunas.
+
+Las concentraciones robustas contienen el `r round(pct_robustas, 1)`% de los siniestros, y el `r round(pct_robustas_pe1)`% de los siniestros ubicados en ellas ocurrió en la Panamericana. La mayor zona continua sigue la Panamericana Norte y la Vía de Evitamiento (ver 4.8).
+
+Finalmente, la identificación de puntos calientes no es neutral respecto del método de inferencia. Bivand y Wong (2018) muestran que el estadístico Gi calculado de forma analítica y el obtenido mediante permutaciones condicionales pueden diferir considerablemente. Advierten, además, que su uso para “detectar” puntos calientes debe considerar tanto la corrección por comparaciones múltiples como estas diferencias (pp. 19–21, 28). Por ello, los tramos y zonas críticas se presentan aquí como evidencia descriptiva robusta, no como delimitaciones definitivas (ver 2.7).
+
+### 5.4 Implicancias para la gestión urbana y vial
+
+Sin pretender establecer causas, los resultados permiten orientar prioridades en tres frentes:
+
+- **Tramos críticos.** Una parte sustancial del problema metropolitano se concentra en pocos kilómetros: `r n_criticos` tramos críticos, que suman `r f_num(km_criticos, 1)` km y concentran el `r f_pct(pct_sin_criticos)` de los siniestros; `r n_criticos_pe1` de ellos están en la Panamericana (ver 4.7). En `r n_tramos_peatonales` de esos tramos, más de la mitad de los fallecidos fueron peatones. Son candidatos naturales para auditorías de seguridad vial, revisión de cruces peatonales, iluminación y control de velocidad, especialmente en horario nocturno.
+
+- **Estrategias por tipo de territorio.** La diferencia entre tasas sugiere estrategias diferenciadas para dos tipos de territorio (ver 4.5): los corredores de paso, en los distritos atravesados por la Panamericana, y las redes urbanas densas, en los distritos con alta siniestralidad por kilómetro.
+
+- **Calidad de la información.** Los datos faltantes en el dosaje etílico (ver 3.6), la frecuencia de vehículos fugados (ver 4.3) y la ausencia de datos públicos de flujos vehiculares limitan el paso de la descripción a la explicación. Fortalecer estos registros es una condición para evaluar la efectividad de cualquier intervención.
+
+### 5.5 Alcances y limitaciones
+
+- **Universo de estudio.** El análisis comprende únicamente los siniestros fatales registrados por el ONSV, cuya información tiene carácter preliminar. No puede generalizarse al conjunto de siniestros viales.
+- **Exposición.** Ninguno de los indicadores incorpora flujos vehiculares o peatonales, por lo que las tasas no son medidas de riesgo en sentido estricto (ver 4.5). En particular, no es posible determinar si el aumento en la Panamericana Sur acompaña un aumento del tránsito.
+- **Denominadores poblacionales.** La población corresponde al censo de 2025, posterior al período analizado, y mide residentes, no usuarios de las vías (ver 3.10). En distritos en expansión, la población de 2025 podría subestimar ligeramente las tasas del período.
+- **Red vial.** Las redes de Lima y del Callao provienen de fuentes, fechas y criterios de clasificación distintos (ver 2.5). La proporción de siniestros ubicados a menos de 50 metros de la red es de `r f_pct(cob_lima, 0)` en Lima y `r f_pct(cob_callao, 0)` en el Callao. Aun así, las tasas por kilómetro entre provincias deben compararse con cautela.
+- **Valor esperado de los tramos.** El exceso de siniestros se evalúa respecto de vías de la misma clase y en proporción a su longitud, no respecto de su volumen de tránsito (ver 4.7).
+- **Longitud de los tramos.** Los tramos críticos se identificaron con una sola longitud, de unos 500 metros. A diferencia de las concentraciones hexagonales, no se evaluó su sensibilidad a tramos más cortos o más largos. Los resultados del análisis multiescala del apartado 4.8, que coinciden en señalar a la Panamericana, ofrecen una verificación indirecta.
+- **Escala e inferencia.** Los resultados espaciales dependen del tamaño de las unidades, del área de análisis (a menos de 1 kilómetro de la red principal) y del método de inferencia. Por ello se privilegian los resultados robustos entre escalas (ver 4.8).
+- **Línea base temporal.** Las restricciones de movilidad vigentes en 2021 afectan la comparación con los años siguientes, en particular en la madrugada de los días laborables y en los domingos (ver 4.2.1 y 4.3).
+- **Supuesto de Poisson.** Las pruebas sobre conteos, incluidas las que identifican los tramos críticos, suponen que la variabilidad de los siniestros se ajusta a la distribución de Poisson. Si existiera sobredispersión, los valores p serían algo optimistas; en las series anuales, con solo cuatro años, no es posible estimarla. Los resultados con valores p muy bajos, como el aumento en la Panamericana, son poco sensibles a este supuesto; los cercanos al umbral de significancia deben leerse con mayor cautela.
+- **Localización.** Los siniestros ubicados sobre límites distritales se asignaron según su coordenada, una decisión convencional en avenidas limítrofes (ver 2.4).
+- **Trayectorias distritales particulares.** Las tendencias observadas en el distrito del Callao y en San Borja requieren contrastarse con la fuente antes de atribuirlas a cambios reales (ver 4.6).
+- **Causalidad.** El estudio es descriptivo; las asociaciones identificadas no permiten establecer relaciones causales.
+
+## 6. Conclusiones
+
+Los siniestros de tránsito fatales registrados en Lima y Callao entre 2021 y 2024 presentaron una distribución desigual en el tiempo y en el territorio. Los `r f_num(n_total)` siniestros analizados causaron `r f_num(resumen_indicadores$total_fallecidos)` fallecimientos, y el `r f_pct(pct_peatones)` de las víctimas fatales fueron peatones.
+
+La serie metropolitana no muestra una reducción. El aumento de `r f_pct(variacion_acumulada)` entre 2021 y 2024 no es estadísticamente concluyente y está influido por las restricciones de movilidad de 2021. Su descomposición, sin embargo, es clara: el resto de la red se mantuvo estable, mientras que los siniestros en la Panamericana crecieron `r f_pct(pruebas_pe1$variacion[1], 0)`, sobre todo en la Panamericana Sur, que pasó de `r ramales_pe1$a2021[2]` a `r ramales_pe1$a2024[2]` siniestros.
+
+El análisis de la red vial traduce este hallazgo en una geografía concreta. `r n_criticos` tramos de unos 500 metros, que suman `r f_num(km_criticos, 1)` km, concentran el `r f_pct(pct_sin_criticos)` de los siniestros; `r n_criticos_pe1` de ellos están en la Panamericana. Las concentraciones espaciales robustas a la escala de análisis confirman este patrón y lo extienden a la Vía de Evitamiento y a algunos sectores del centro y del sur de Lima.
+
+El patrón temporal se vincula con el vial. La madrugada del fin de semana es el momento más crítico, y la Panamericana concentra el `r f_pct(pct_madr_en_pe1, 0)` de los siniestros ocurridos de madrugada, con una proporción de vehículos fugados `r f_num(razon_fuga, 1)` veces mayor que la del resto de la red.
+
+La identificación de los territorios más afectados depende del indicador utilizado. Por habitante destacan los distritos atravesados por la Panamericana; por kilómetro de vía, los distritos urbanos densos. Reconocer esta diferencia permite orientar estrategias distintas para corredores de paso y redes urbanas densas.
+
+Desde el punto de vista metodológico, el trabajo muestra que la construcción cuidadosa de la base de datos, las pruebas estadísticas sobre conteos y el análisis de sensibilidad a la escala no son etapas accesorias. Sin ellas, se habría concluido que la siniestralidad aumentó en toda la metrópoli y se habría ocultado que el problema se concentra, en buena medida, en un solo corredor.
+
+## 7. Referencias
+
+Benjamini, Y., y Hochberg, Y. (1995). Controlling the false discovery rate: A practical and powerful approach to multiple testing. *Journal of the Royal Statistical Society: Series B (Methodological), 57*(1), 289–300. <https://doi.org/10.1111/j.2517-6161.1995.tb02031.x>
+
+Bivand, R. S., y Wong, D. W. S. (2018). Comparing implementations of global and local indicators of spatial association. *TEST, 27*(3), 716–748. <https://doi.org/10.1007/s11749-018-0599-x> (versión aceptada de acceso abierto: <http://hdl.handle.net/11250/2565494>)
+
+Gilardi, A., Mateu, J., Borgoni, R., y Lovelace, R. (2022). Multivariate hierarchical analysis of car crashes data considering a spatial network lattice. *Journal of the Royal Statistical Society Series A: Statistics in Society, 185*(3), 1150–1177. Versión preliminar de acceso abierto: <https://arxiv.org/abs/2011.12595>
+
+Instituto Metropolitano de Planificación. (2025). *Sistema Vial Metropolitano* [Capa geográfica].
+
+Instituto Nacional de Estadística e Informática. (2023). *Límites distritales* [Capa geográfica]. <https://ide.inei.gob.pe/#capas>
+
+Instituto Nacional de Estadística e Informática. (2026). *Censos Nacionales 2025: XIII de Población, VIII de Vivienda y IV de Comunidades Indígenas. Consulta de población por sexo según nivel distrital* [Base de datos].
+
+Marshall, R. J. (1991). Mapping disease and mortality rates using empirical Bayes estimators. *Journal of the Royal Statistical Society. Series C (Applied Statistics), 40*(2), 283–294. <https://doi.org/10.2307/2347593>
+
+Municipalidad Provincial del Callao. (2025). *Capa de red vial y calles urbanas del Plan de Desarrollo Metropolitano del Callao al 2040 (PDM Callao 2040)* [Capa geográfica].
+
+Observatorio Nacional de Seguridad Vial. (2025). *Bases de datos de siniestros fatales, personas involucradas y vehículos involucrados 2021–2025 (preliminar)* [Conjunto de datos]. Ministerio de Transportes y Comunicaciones. <https://www.onsv.gob.pe/datosabiertos>
+
+Ord, J. K., y Getis, A. (1995). Local spatial autocorrelation statistics: Distributional issues and an application. *Geographical Analysis, 27*(4), 286–306. <https://doi.org/10.1111/j.1538-4632.1995.tb00912.x>
+
+Organización Panamericana de la Salud. (2023, 13 de diciembre). *Despite notable progress, road safety remains urgent global issue* [Nota de prensa]. <https://www.paho.org/en/news/13-12-2023-despite-notable-progress-road-safety-remains-urgent-global-issue>
+
+Presidencia del Consejo de Ministros. (2021a). Decreto Supremo N.° 076-2021-PCM. *Diario Oficial El Peruano*. <https://busquedas.elperuano.pe/dispositivo/NL/1944838-1>
+
+Presidencia del Consejo de Ministros. (2021b). Decreto Supremo N.° 174-2021-PCM. *Diario Oficial El Peruano*. <https://busquedas.elperuano.pe/dispositivo/NL/2016190-1>
+
+R Core Team. (`r R.version$year`). *R: A language and environment for statistical computing* [Software]. R Foundation for Statistical Computing. <https://www.R-project.org/>
+
+Xu, P., Huang, H., y Dong, N. (2018). The modifiable areal unit problem in traffic safety: Basic issue, potential solutions and future research. *Journal of Traffic and Transportation Engineering (English Edition), 5*(1), 73–82. <https://doi.org/10.1016/j.jtte.2015.09.010>
+
+```{r verificacion-cifras, include = FALSE}
+# Verificación de las cifras escritas a mano en el Resumen y en Métodos.
+# Esas secciones preceden a los cálculos y no pueden usar código en línea;
+# si alguna cifra deja de coincidir con los datos, la compilación se detiene.
+peatones_anio <- base_maestra_validada %>%
+  st_drop_geometry() %>%
+  group_by(anio) %>%
+  summarise(pct = 100 * sum(n_peatones_fallecidos, na.rm = TRUE) / sum(cantidad_de_fallecidos), .groups = "drop")
+validacion_df <- st_drop_geometry(base_maestra_validada)
+no_coincidentes <- filter(validacion_df, validacion_espacial == "Distrito no coincidente")
+coincidentes <- filter(validacion_df, validacion_espacial == "Distrito coincidente")
+
+controles <- list(
+  "Registros de la base de siniestros (9,106)" = nrow(siniestros_raw) == 9106,
+  "Registros de 2025 (98)" = sum(base_maestra$anio == 2025, na.rm = TRUE) == 98,
+  "Siniestros 2021-2024 (1,658)" = n_total == 1658,
+  "Siniestros en el ámbito cartográfico (1,656)" = n_ambito == 1656,
+  "Registros fuera del ámbito (2)" = sum(validacion_df$validacion_espacial == "Fuera del ámbito cartográfico") == 2,
+  "Registros no coincidentes (52)" = nrow(no_coincidentes) == 52,
+  "No coincidentes a menos de 100 m del límite" = all(no_coincidentes$distancia_limite_m < 100),
+  "Mediana de no coincidentes (unos 3.5 m)" = abs(median(no_coincidentes$distancia_limite_m) - 3.5) < 0.5,
+  "Mediana de coincidentes (casi 500 m)" = between(median(coincidentes$distancia_limite_m), 400, 500),
+  "Personas fallecidas (1,724)" = resumen_indicadores$total_fallecidos == 1724,
+  "Peatones entre fallecidos (54.1%)" = round(pct_peatones, 1) == 54.1,
+  "Peatones por año (entre 52% y 55%)" = all(between(round(peatones_anio$pct), 52, 55)),
+  "Panamericana 2021 y 2024 (80 y 123)" = pruebas_pe1$anio_2021[1] == 80 && pruebas_pe1$anio_2024[1] == 123,
+  "Variación de la Panamericana (+54%)" = round(pruebas_pe1$variacion[1]) == 54,
+  "Valor p de la Panamericana (0.003)" = round(pruebas_pe1$p_valor[1], 3) == 0.003,
+  "Resto de la red (309 y 310)" = pruebas_pe1$anio_2021[2] == 309 && pruebas_pe1$anio_2024[2] == 310,
+  "Panamericana Sur (33 y 71)" = ramales_pe1$a2021[2] == 33 && ramales_pe1$a2024[2] == 71,
+  "Uno de cada cuatro siniestros y fallecidos en la PE-1" = between(resumen_pe1$pct_siniestros[1], 23, 27) && between(resumen_pe1$pct_fallecidos[1], 23, 27),
+  "Tramos de la red (5,959)" = n_tramos == 5959,
+  "Tramos críticos (22)" = n_criticos == 22,
+  "Tramos críticos en la Panamericana (17)" = n_criticos_pe1 == 17,
+  "Madrugada en la PE-1 (un tercio)" = between(perfil_pe1[["De madrugada (%)"]][1], 30, 37),
+  "Madrugada en la PE-1 frente al resto (casi el doble)" = between(razon_madrugada, 1.8, 2.0),
+  "Fuga en la PE-1 (una cuarta parte)" = between(perfil_pe1[["Con vehículo fugado (%)"]][1], 22, 28),
+  "Tasas por habitante más altas" = identical(top_pob[1:3], c("Punta Hermosa", "Lurín", "San Bartolo")),
+  "Tasas por km más altas" = identical(top_km[1:3], c("Rímac", "Los Olivos", "Chorrillos")),
+  "San Juan de Lurigancho, segundo en número de casos" = identical(puesto_sjl_casos, 2L),
+  "San Juan de Lurigancho, entre las tasas por habitante más bajas" = sjl$puesto > nrow(orden_pob) - 10,
+  "Valor p de la serie metropolitana (0.13)" = round(prueba_2021_2024$p.value, 2) == 0.13
+)
+
+controles_ok <- vapply(controles, isTRUE, logical(1))
+if (!all(controles_ok)) {
+  stop(
+    "Cifras del Resumen o de Métodos que no coinciden con los datos: ",
+    paste(names(controles_ok)[!controles_ok], collapse = "; ")
+  )
+}
+```

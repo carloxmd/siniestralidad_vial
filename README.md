@@ -4,7 +4,7 @@ Análisis espacial y temporal de los 1,658 siniestros de tránsito fatales regis
 
 Trabajo final de los módulos de Ciencia de Datos I y II del Posgrado en Big Data e Inteligencia Territorial – Cohorte 7.
 
-**Autor:** MSc. Arq. Carlos Morales Dávila
+**Autor:** MSc. Arq. Carlos Morales Dávila, 8 de Octubre de 2026
 
 ------------------------------------------------------------------------
 
